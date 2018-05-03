@@ -1,0 +1,3 @@
+[submodule "Public-Transit-Data"]
+	path = Public-Transit-Data
+	url = https://github.com/ducminh-phan/Public-Transit-Data
