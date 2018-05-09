@@ -1,9 +1,10 @@
 #include <iostream>
-#include "parser.hpp"
+
+#include "data_structure.hpp"
 
 int main() {
-    Parser parser {"Paris"};
-    parser.parse_data();
+    Data data {"Paris"};
+    data.summary();
 
     return 0;
 }
