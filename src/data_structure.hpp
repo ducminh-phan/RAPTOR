@@ -25,7 +25,7 @@ struct Stop {
     std::vector<route_id_t> route_ids;
     bool is_marked = false;
 
-    bool is_valid() const { return route_ids.empty(); }
+    bool is_valid() const { return !route_ids.empty(); }
 };
 
 struct StopTime {

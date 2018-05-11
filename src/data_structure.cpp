@@ -73,7 +73,7 @@ void Timetable::parse_transfers() {
         auto to = static_cast<stop_id_t>((*iter)[1]);
         auto time = static_cast<_time_t>((*iter)[2]);
 
-        if (!m_stops[from].is_valid() && !m_stops[to].is_valid()) {
+        if (m_stops[from].is_valid() && m_stops[to].is_valid()) {
             m_stops[from].transfers.emplace_back(to, time);
             m_stops[to].transfers.emplace_back(from, time);
         }
@@ -94,7 +94,6 @@ void Timetable::parse_stop_times() {
         size_t pos = trip_pos.second;
 
         m_routes[route_id].stop_times[pos].emplace_back(stop_id, arr, dep);
-        break;
     }
 }
 
