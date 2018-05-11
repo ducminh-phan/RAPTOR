@@ -3,8 +3,8 @@
 #include "data_structure.hpp"
 
 int main() {
-    Data data {"Paris"};
-    data.summary();
+    Timetable timetable {"Paris"};
+    timetable.summary();
 
     return 0;
 }

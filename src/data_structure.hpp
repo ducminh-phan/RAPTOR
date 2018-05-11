@@ -23,8 +23,9 @@ struct Stop {
     stop_id_t id;
     std::vector<Transfer> transfers;
     std::vector<route_id_t> route_ids;
+    bool is_marked = false;
 
-    bool empty() { return route_ids.empty(); }
+    bool is_valid() const { return route_ids.empty(); }
 };
 
 struct StopTime {
@@ -41,7 +42,7 @@ struct Route {
     std::vector<std::vector<StopTime>> stop_times;
 };
 
-class Data {
+class Timetable {
 private:
     using trip_pos_t = std::pair<route_id_t, size_t>;
 
@@ -64,13 +65,19 @@ private:
     void parse_stop_times();
 
 public:
+    const std::string& city_name() const { return m_city_name; }
+
     const std::string& city_name() { return m_city_name; }
+
+    const std::vector<Route>& routes() const { return m_routes; }
 
     const std::vector<Route>& routes() { return m_routes; }
 
-    const std::vector<Stop>& stops() { return m_stops; }
+    const std::vector<Stop>& stops() const { return m_stops; }
 
-    explicit Data(std::string city_name) : m_city_name {std::move(city_name)} {
+    std::vector<Stop>& stops() { return m_stops; }
+
+    explicit Timetable(std::string city_name) : m_city_name {std::move(city_name)} {
         m_path = "../Public-Transit-Data/" + m_city_name + "/";
         parse_data();
     };

@@ -4,14 +4,14 @@
 #include "csv_reader.hpp"
 #include "utilities.hpp"
 
-std::ifstream Data::read_dataset_file(const std::string& file_name) {
+std::ifstream Timetable::read_dataset_file(const std::string& file_name) {
     std::ifstream file {m_path + file_name};
     check_file_exists(file, file_name);
 
     return file;
 }
 
-void Data::parse_data() {
+void Timetable::parse_data() {
     Timer timer;
 
     std::cout << "Parsing the data..." << std::endl;
@@ -25,7 +25,7 @@ void Data::parse_data() {
     std::cout << "Time elapsed: " << timer.elapsed() << timer.unit() << std::endl;
 }
 
-void Data::parse_trips() {
+void Timetable::parse_trips() {
     std::ifstream trips_file = read_dataset_file("trips.txt");
 
     for (CSVIterator<uint32_t> iter {trips_file}; iter != CSVIterator<uint32_t>(); ++iter) {
@@ -47,7 +47,7 @@ void Data::parse_trips() {
     }
 }
 
-void Data::parse_stop_routes() {
+void Timetable::parse_stop_routes() {
     std::ifstream stop_routes_file = read_dataset_file("stop_routes.txt");
 
     for (CSVIterator<uint32_t> iter {stop_routes_file}; iter != CSVIterator<uint32_t>(); ++iter) {
@@ -65,7 +65,7 @@ void Data::parse_stop_routes() {
     }
 }
 
-void Data::parse_transfers() {
+void Timetable::parse_transfers() {
     std::ifstream transfers_file = read_dataset_file("transfers_transitive.txt");
 
     for (CSVIterator<uint32_t> iter {transfers_file}; iter != CSVIterator<uint32_t>(); ++iter) {
@@ -73,14 +73,14 @@ void Data::parse_transfers() {
         auto to = static_cast<stop_id_t>((*iter)[1]);
         auto time = static_cast<_time_t>((*iter)[2]);
 
-        if (!m_stops[from].empty() && !m_stops[to].empty()) {
+        if (!m_stops[from].is_valid() && !m_stops[to].is_valid()) {
             m_stops[from].transfers.emplace_back(to, time);
             m_stops[to].transfers.emplace_back(from, time);
         }
     }
 }
 
-void Data::parse_stop_times() {
+void Timetable::parse_stop_times() {
     std::ifstream stop_times_file = read_dataset_file("stop_times.txt");
 
     for (CSVIterator<uint32_t> iter {stop_times_file}; iter != CSVIterator<uint32_t>(); ++iter) {
@@ -94,10 +94,11 @@ void Data::parse_stop_times() {
         size_t pos = trip_pos.second;
 
         m_routes[route_id].stop_times[pos].emplace_back(stop_id, arr, dep);
+        break;
     }
 }
 
-void Data::summary() {
+void Timetable::summary() {
     std::cout << std::string(80, '-') << std::endl;
 
     std::cout << "Summary of the dataset:" << std::endl;
