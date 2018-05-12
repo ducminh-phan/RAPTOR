@@ -38,11 +38,11 @@ void Timetable::parse_trips() {
             m_routes[m_routes.size() - 1].id = static_cast<route_id_t>(m_routes.size() - 1);
         }
 
-        // Map the trip to its position in m_routes and trip_ids, this map is used
+        // Map the trip to its position in m_routes and trips, this map is used
         // to quickly add the stop times later in the parse_stop_times function
-        m_trip_positions.insert({trip_id, {route_id, m_routes[route_id].trip_ids.size()}});
+        m_trip_positions.insert({trip_id, {route_id, m_routes[route_id].trips.size()}});
 
-        m_routes[route_id].trip_ids.push_back(trip_id);
+        m_routes[route_id].trips.push_back(trip_id);
         m_routes[route_id].stop_times.emplace_back();
     }
 }
@@ -61,7 +61,7 @@ void Timetable::parse_stop_routes() {
             m_stops[m_stops.size() - 1].id = static_cast<stop_id_t>(m_stops.size() - 1);
         }
 
-        m_stops[stop_id].route_ids.push_back(route_id);
+        m_stops[stop_id].routes.push_back(route_id);
     }
 }
 
@@ -107,9 +107,9 @@ void Timetable::summary() {
 
     int count_trips = 0;
     int count_stop_times = 0;
-    for (auto const& route: m_routes) {
-        count_trips += route.trip_ids.size();
-        for (auto const& stop_time: route.stop_times) {
+    for (const auto& route: m_routes) {
+        count_trips += route.trips.size();
+        for (const auto& stop_time: route.stop_times) {
             count_stop_times += stop_time.size();
         }
     }
@@ -119,8 +119,8 @@ void Timetable::summary() {
     // Count the number of stops with at least one route using it
     int count_stops = 0;
     int count_transfers = 0;
-    for (auto const& stop: m_stops) {
-        if (!stop.route_ids.empty()) {
+    for (const auto& stop: m_stops) {
+        if (stop.is_valid()) {
             count_stops += 1;
         }
 

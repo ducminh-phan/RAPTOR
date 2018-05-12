@@ -7,7 +7,7 @@
 #include <vector>
 #include <string>
 
-template <class T>
+template<class T>
 class CSVRow {
 private:
     std::vector<T> m_data;
@@ -50,7 +50,7 @@ public:
     };
 
     friend std::ostream& operator<<(std::ostream& out, const CSVRow<T>& data) {
-        for (auto& i : data.m_data) {
+        for (const auto& i : data.m_data) {
             out << i << " ";
         }
 
@@ -59,7 +59,7 @@ public:
 };
 
 
-template <class T>
+template<class T>
 class CSVIterator {
 private:
     bool m_header;
@@ -67,7 +67,7 @@ private:
     CSVRow<T> m_row;
 
 public:
-    explicit CSVIterator(std::istream& str, bool header=true) :
+    explicit CSVIterator(std::istream& str, bool header = true) :
             m_str {str.good() ? &str : nullptr}, m_header {header} {
         ++(*this);
 

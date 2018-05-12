@@ -22,10 +22,12 @@ struct Transfer {
 struct Stop {
     stop_id_t id;
     std::vector<Transfer> transfers;
-    std::vector<route_id_t> route_ids;
+    std::vector<route_id_t> routes;
     bool is_marked = false;
 
-    bool is_valid() const { return !route_ids.empty(); }
+    bool is_valid() const { return !routes.empty(); }
+
+    bool is_valid() { return !routes.empty(); }
 };
 
 struct StopTime {
@@ -38,7 +40,7 @@ struct StopTime {
 
 struct Route {
     route_id_t id;
-    std::vector<trip_id_t> trip_ids;
+    std::vector<trip_id_t> trips;
     std::vector<std::vector<StopTime>> stop_times;
 };
 
