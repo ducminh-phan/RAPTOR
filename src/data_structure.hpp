@@ -41,6 +41,7 @@ struct StopTime {
 struct Route {
     route_id_t id;
     std::vector<trip_id_t> trips;
+    std::vector<stop_id_t> stops;
     std::vector<std::vector<StopTime>> stop_times;
 };
 

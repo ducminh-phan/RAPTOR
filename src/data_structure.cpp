@@ -94,6 +94,13 @@ void Timetable::parse_stop_times() {
         size_t pos = trip_pos.second;
 
         m_routes[route_id].stop_times[pos].emplace_back(stop_id, arr, dep);
+
+        // Create the stop sequence of the route corresponding to trip_id,
+        // we add stop_id to the stop sequence only once by checking if
+        // trip_id is the first trip of its route
+        if (trip_id == m_routes[route_id].trips[0]) {
+            m_routes[route_id].stops.push_back(stop_id);
+        }
     }
 }
 
