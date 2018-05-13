@@ -23,11 +23,8 @@ struct Stop {
     stop_id_t id;
     std::vector<Transfer> transfers;
     std::vector<route_id_t> routes;
-    bool is_marked = false;
 
     bool is_valid() const { return !routes.empty(); }
-
-    bool is_valid() { return !routes.empty(); }
 };
 
 struct StopTime {
@@ -70,15 +67,9 @@ private:
 public:
     const std::string& city_name() const { return m_city_name; }
 
-    const std::string& city_name() { return m_city_name; }
-
     const std::vector<Route>& routes() const { return m_routes; }
 
-    const std::vector<Route>& routes() { return m_routes; }
-
     const std::vector<Stop>& stops() const { return m_stops; }
-
-    std::vector<Stop>& stops() { return m_stops; }
 
     explicit Timetable(std::string city_name) : m_city_name {std::move(city_name)} {
         m_path = "../Public-Transit-Data/" + m_city_name + "/";

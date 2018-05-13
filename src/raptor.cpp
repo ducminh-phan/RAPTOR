@@ -6,15 +6,15 @@
 
 const _time_t inf = std::numeric_limits<_time_t>::max();
 
-bool validate_input(const Timetable& timetable, const _time_t& dep, const stop_id_t& source, const stop_id_t& target) {
-    size_t max_stop_id = timetable.stops().size();
+bool Raptor::validate_input() {
+    size_t max_stop_id = timetable->stops().size();
 
-    if ((source >= max_stop_id) || !timetable.stops()[source].is_valid()) {
+    if ((source >= max_stop_id) || !timetable->stops()[source].is_valid()) {
         std::cerr << "The source stop id of " << source << " is not a valid stop." << std::endl;
         return false;
     }
 
-    if ((target >= max_stop_id) || !timetable.stops()[target].is_valid()) {
+    if ((target >= max_stop_id) || !timetable->stops()[target].is_valid()) {
         std::cerr << "The target stop id of " << target << " is not a valid stop." << std::endl;
         return false;
     }
@@ -45,9 +45,8 @@ route_stop_queue_t::iterator find(route_stop_queue_t& queue, const route_id_t& r
 }
 
 // Check is stop1 comes before stop2 in the route
-bool check_stops_order(const Timetable& timetable, const route_id_t& route,
-                       const stop_id_t& stop1, const stop_id_t& stop2) {
-    const std::vector<stop_id_t>& stops = timetable.routes()[route].stops;
+bool Raptor::check_stops_order(const route_id_t& route, const stop_id_t& stop1, const stop_id_t& stop2) {
+    const std::vector<stop_id_t>& stops = timetable->routes()[route].stops;
     auto idx1 = std::find(stops.begin(), stops.end(), stop1) - stops.begin();
     auto idx2 = std::find(stops.begin(), stops.end(), stop2) - stops.begin();
 
@@ -59,42 +58,43 @@ bool check_stops_order(const Timetable& timetable, const route_id_t& route,
     return idx1 < idx2;
 }
 
-route_stop_queue_t make_queue(Timetable& timetable) {
+route_stop_queue_t Raptor::make_queue() {
     route_stop_queue_t queue;
     queue.emplace_back(0, 415);
 
-    for (auto& stop: timetable.stops()) {
-        if (stop.is_marked) {
-            for (const auto& route: stop.routes) {
-                bool found = false;
+    for (const auto& stop_id: marked_stops) {
+        const Stop& stop = timetable->stops()[stop_id];
 
-                while (true) {
-                    // Check if (r, p') in Q for some stop p' !=p
-                    auto iter = find(queue, route, stop.id);
-                    if (iter == queue.end()) break;
+        for (const auto& route: stop.routes) {
+            bool found = false;
 
-                    found = true;
+            while (true) {
+                // Check if (r, p') in Q for some stop p' != p
+                auto iter = find(queue, route, stop_id);
+                if (iter == queue.end()) break;
 
-                    // If p comes before p' in r, then substitute (r, p') by (r, p)
-                    if (check_stops_order(timetable, route, stop.id, iter->second)) {
-                        iter->second = stop.id;
-                    }
+                found = true;
+
+                // If p comes before p' in r, then substitute (r, p') by (r, p)
+                if (check_stops_order(route, stop_id, iter->second)) {
+                    iter->second = stop_id;
                 }
-
-                if (!found) queue.emplace_back(route, stop.id);
             }
-        }
 
-        stop.is_marked = false;
+            if (!found) queue.emplace_back(route, stop_id);
+        }
     }
+
+    marked_stops.clear();
 
     return queue;
 }
 
-void raptor(Timetable& timetable, const _time_t& dep, const stop_id_t& source, const stop_id_t& target) {
-    std::cout << std::boolalpha << validate_input(timetable, dep, source, target) << std::endl;
+void Raptor::raptor() {
+    std::cout << std::boolalpha << validate_input() << std::endl;
 
-    timetable.stops()[source].is_marked = true;
+    marked_stops.insert(source);
+    std::cout << marked_stops.size() << std::endl;
 
-    auto queue = make_queue(timetable);
+    auto queue = make_queue();
 }

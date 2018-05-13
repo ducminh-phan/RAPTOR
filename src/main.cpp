@@ -7,7 +7,8 @@ int main() {
     Timetable timetable {"Paris"};
     timetable.summary();
 
-    raptor(timetable, 123, 414, 666);
+    Raptor r {&timetable, 123, 414, 666};
+    r.raptor();
 
     return 0;
 }
