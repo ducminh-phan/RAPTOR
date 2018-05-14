@@ -4,6 +4,8 @@
 #include "csv_reader.hpp"
 #include "utilities.hpp"
 
+extern const trip_id_t null_trip = -1;
+
 std::ifstream Timetable::read_dataset_file(const std::string& file_name) {
     std::ifstream file {m_path + file_name};
     check_file_exists(file, file_name);

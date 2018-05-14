@@ -12,8 +12,8 @@
 using stop_id_t = uint16_t;
 using trip_id_t = int32_t;
 using route_id_t = uint16_t;
-const trip_id_t null_trip = -1;
-// const trip_id_t null_trip = std::numeric_limits<trip_id_t>::max();
+using trip_pos_t = std::pair<route_id_t, size_t>;
+extern const trip_id_t null_trip;
 
 class _time_t {
 private:
@@ -37,7 +37,7 @@ public:
 
     friend bool operator>=(const _time_t& t1, const _time_t& t2) { return !(t1 < t2); }
 
-    // friend bool operator==(const _time_t& t1, const _time_t& t2) { return t1.m_val == t2.m_val; }
+    friend bool operator<=(const _time_t& t1, const _time_t& t2) { return !(t1 > t2); }
 
     friend std::ostream& operator<<(std::ostream& out, const _time_t& t) {
         out << t.m_val;
@@ -78,8 +78,6 @@ struct Route {
 
 class Timetable {
 private:
-    using trip_pos_t = std::pair<route_id_t, size_t>;
-
     std::string m_city_name;
     std::string m_path;
     std::vector<Route> m_routes;
@@ -108,6 +106,8 @@ public:
     const std::vector<Stop>& stops() const { return m_stops; }
 
     const Stop& stops(stop_id_t stop_id) const { return m_stops[stop_id]; }
+
+    const trip_pos_t& trip_positions(trip_id_t trip_id) const { return m_trip_positions.at(trip_id); }
 
     explicit Timetable(std::string city_name) : m_city_name {std::move(city_name)} {
         m_path = "../Public-Transit-Data/" + m_city_name + "/";

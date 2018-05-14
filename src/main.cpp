@@ -2,6 +2,7 @@
 
 #include "data_structure.hpp"
 #include "raptor.hpp"
+#include "utilities.hpp"
 
 
 bool test(const Timetable& timetable) {
@@ -23,10 +24,20 @@ int main() {
     Timetable timetable {"Paris"};
     timetable.summary();
 
-    Raptor r {&timetable, 123, 414, 666};
-    r.raptor();
-
     std::cout << "Test results: " << (test(timetable) ? "passed" : "failed") << std::endl;
+
+    Timer timer;
+
+    Raptor r {&timetable, 830, 294, 19799};
+    auto res = r.raptor();
+
+    std::cout << "Time elapsed: " << timer.elapsed() << timer.unit() << std::endl;
+
+    std::cout << "Labels of the target stop:" << std::endl;
+    for (const auto& t: res) {
+        std::cout << t << std::endl;
+    }
+
 
     return 0;
 }
