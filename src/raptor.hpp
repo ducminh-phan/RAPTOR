@@ -17,6 +17,8 @@ private:
     const stop_id_t source;
     const stop_id_t target;
     std::unordered_set<stop_id_t> marked_stops;
+    std::unordered_map<stop_id_t, _time_t> earliest_arrival_time;
+    std::unordered_map<stop_id_t, std::vector<_time_t>> labels;
 
     bool validate_input();
 
@@ -24,10 +26,11 @@ private:
 
     route_stop_queue_t make_queue();
 
+    trip_id_t earliest_trip(const int& round, const route_id_t& route_id, const stop_id_t& stop_id);
+
 public:
     Raptor(Timetable* timetable_, stop_id_t source_id, stop_id_t target_id, _time_t departure) :
-            timetable {timetable_}, source {source_id}, target {target_id}, dep {departure}
-    {};
+            timetable {timetable_}, source {source_id}, target {target_id}, dep {departure} {}
 
     void raptor();
 };
