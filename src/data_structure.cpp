@@ -4,6 +4,8 @@
 #include "csv_reader.hpp"
 #include "utilities.hpp"
 
+extern const trip_id_t null_trip = -1;
+
 std::ifstream Timetable::read_dataset_file(const std::string& file_name) {
     std::ifstream file {m_path + file_name};
     check_file_exists(file, file_name);
@@ -35,7 +37,7 @@ void Timetable::parse_trips() {
         // Add a new route if we encounter a new id
         while (m_routes.size() <= route_id) {
             m_routes.emplace_back();
-            m_routes[m_routes.size() - 1].id = static_cast<route_id_t>(m_routes.size() - 1);
+            m_routes.back().id = static_cast<route_id_t>(m_routes.size() - 1);
         }
 
         // Map the trip to its position in m_routes and trips, this map is used
@@ -58,7 +60,7 @@ void Timetable::parse_stop_routes() {
         // note that we might have a missing id, e.g., there is no route using stop #1674
         while (m_stops.size() <= stop_id) {
             m_stops.emplace_back();
-            m_stops[m_stops.size() - 1].id = static_cast<stop_id_t>(m_stops.size() - 1);
+            m_stops.back().id = static_cast<stop_id_t>(m_stops.size() - 1);
         }
 
         m_stops[stop_id].routes.push_back(route_id);
@@ -94,6 +96,16 @@ void Timetable::parse_stop_times() {
         size_t pos = trip_pos.second;
 
         m_routes[route_id].stop_times[pos].emplace_back(stop_id, arr, dep);
+
+        // Create the stop sequence of the route corresponding to trip_id,
+        // we add stop_id to the stop sequence only once by checking if
+        // trip_id is the first trip of its route
+        if (trip_id == m_routes[route_id].trips[0]) {
+            m_routes[route_id].stops.push_back(stop_id);
+
+            // Map the stop_id to its index in the stop sequence
+            m_routes[route_id].stop_positions[stop_id] = m_routes[route_id].stops.size() - 1;
+        }
     }
 }
 
