@@ -2,6 +2,7 @@
 #define DATA_STRUCTURE_HPP
 
 #include <cstdint>
+#include <iostream>
 #include <limits> // std::numeric_limits
 #include <string>
 #include <unordered_map>
@@ -26,11 +27,22 @@ public:
 
     _time_t(value_type val_) : m_val {val_} {}
 
-    const value_type& val() const { return m_val; }
+    friend _time_t operator+(const _time_t& t1, const _time_t t2) { return {t1.m_val + t2.m_val}; }
 
-    value_type& val() { return m_val; }
+    friend bool operator<(const _time_t& t1, const _time_t& t2) { return t1.m_val < t2.m_val; }
 
-    _time_t& operator=(value_type&& new_val) { m_val = new_val; }
+    friend bool operator>(const _time_t& t1, const _time_t& t2) { return t1.m_val > t2.m_val; }
+
+    friend bool operator>(const _time_t& t1, const value_type& t2) { return t1.m_val > t2; }
+
+    friend bool operator>=(const _time_t& t1, const _time_t& t2) { return !(t1 < t2); }
+
+    // friend bool operator==(const _time_t& t1, const _time_t& t2) { return t1.m_val == t2.m_val; }
+
+    friend std::ostream& operator<<(std::ostream& out, const _time_t& t) {
+        out << t.m_val;
+        return out;
+    }
 };
 
 struct Transfer {

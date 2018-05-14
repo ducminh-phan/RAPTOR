@@ -21,8 +21,8 @@ bool Raptor::validate_input() {
         return false;
     }
 
-    if (dep.val() > 86400) {
-        std::cerr << "The departure time of " << dep.val() << " is invalid." << std::endl;
+    if (dep > 86400) {
+        std::cerr << "The departure time of " << dep << " is invalid." << std::endl;
         return false;
     }
 
@@ -103,7 +103,7 @@ trip_id_t Raptor::earliest_trip(const int& round, const route_id_t& route_id, co
         // The departure time of the current trip at stop_id
         _time_t dep = (*iter)[stop_idx].dep;
 
-        if (dep.val() >= t.val()) return route.trips[iter - stop_times.begin()];
+        if (dep >= t) return route.trips[iter - stop_times.begin()];
         ++iter;
     }
 
@@ -137,11 +137,11 @@ void Raptor::raptor() {
             std::cout << stop_id << std::endl;
             for (const auto& transfer: timetable->stops(stop_id).transfers) {
                 auto dest_id = transfer.dest;
-                auto transfer_time = transfer.time.val();
+                auto transfer_time = transfer.time;
 
                 labels[dest_id].back() = std::min(
-                        labels[dest_id].back().val(),
-                        labels[stop_id].back().val() + transfer_time
+                        labels[dest_id].back(),
+                        labels[stop_id].back() + transfer_time
                 );
 
                 marked_stops.insert(dest_id);
