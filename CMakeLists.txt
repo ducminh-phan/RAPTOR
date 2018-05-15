@@ -3,11 +3,12 @@ project(raptor)
 
 set(CMAKE_CXX_STANDARD 11)
 
+set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/catch)
+add_library(Catch INTERFACE)
+target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 
-add_executable(raptor
-        src/main.cpp
-        src/csv_reader.hpp
-        src/data_structure.cpp src/data_structure.hpp
-        src/utilities.cpp src/utilities.hpp
-        src/raptor.cpp src/raptor.hpp
-)
+file(MAKE_DIRECTORY ${CATCH_INCLUDE_DIR}/build)
+
+include_directories(src)
+add_subdirectory(src)
+add_subdirectory(tests)
