@@ -67,8 +67,8 @@ private:
     CSVRow<T> m_row;
 
 public:
-    explicit CSVIterator(std::istream& str, bool header = true) :
-            m_str {str.good() ? &str : nullptr}, m_header {header} {
+    explicit CSVIterator(std::istream* str_ptr, bool header = true) :
+            m_str {(*str_ptr).good() ? str_ptr : nullptr}, m_header {header} {
         ++(*this);
 
         // skip the header

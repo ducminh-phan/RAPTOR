@@ -5,7 +5,7 @@
 #include <iostream>
 #include <fstream>
 
-void check_file_exists(std::ifstream& file, const std::string& name);
+void check_file_exists(std::istream& file, const std::string& name);
 
 class Timer {
 private:
