@@ -3,11 +3,14 @@
 
 #include <cstdint>
 #include <iostream>
+#include <memory> // std::unique_ptr
 #include <limits> // std::numeric_limits
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include "utilities.hpp"
 
 using stop_id_t = uint16_t;
 using trip_id_t = int32_t;
@@ -84,7 +87,16 @@ private:
     std::vector<Stop> m_stops;
     std::unordered_map<trip_id_t, trip_pos_t> m_trip_positions;
 
-    std::ifstream read_dataset_file(const std::string& file_name);
+    template<class T>
+    std::unique_ptr<T> read_dataset_file(const std::string& file_name) {
+        // Since the copy constructor of std::istream is deleted,
+        // we need to return a new object by pointer
+        std::unique_ptr<T> file_ptr {new T {(m_path + file_name).c_str()}};
+
+        check_file_exists(*file_ptr, file_name);
+
+        return file_ptr;
+    }
 
     void parse_data();
 

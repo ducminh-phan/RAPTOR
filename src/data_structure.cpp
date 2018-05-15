@@ -2,16 +2,9 @@
 
 #include "data_structure.hpp"
 #include "csv_reader.hpp"
-#include "utilities.hpp"
+#include "gzstream.h"
 
 extern const trip_id_t null_trip = -1;
-
-std::ifstream Timetable::read_dataset_file(const std::string& file_name) {
-    std::ifstream file {m_path + file_name};
-    check_file_exists(file, file_name);
-
-    return file;
-}
 
 void Timetable::parse_data() {
     Timer timer;
@@ -28,9 +21,9 @@ void Timetable::parse_data() {
 }
 
 void Timetable::parse_trips() {
-    std::ifstream trips_file = read_dataset_file("trips.txt");
+    auto trips_file = read_dataset_file<igzstream>("trips.gz");
 
-    for (CSVIterator<uint32_t> iter {trips_file}; iter != CSVIterator<uint32_t>(); ++iter) {
+    for (CSVIterator<uint32_t> iter {trips_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto route_id = static_cast<route_id_t>((*iter)[0]);
         auto trip_id = static_cast<trip_id_t>((*iter)[1]);
 
@@ -50,9 +43,9 @@ void Timetable::parse_trips() {
 }
 
 void Timetable::parse_stop_routes() {
-    std::ifstream stop_routes_file = read_dataset_file("stop_routes.txt");
+    auto stop_routes_file = read_dataset_file<igzstream>("stop_routes.gz");
 
-    for (CSVIterator<uint32_t> iter {stop_routes_file}; iter != CSVIterator<uint32_t>(); ++iter) {
+    for (CSVIterator<uint32_t> iter {stop_routes_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto stop_id = static_cast<stop_id_t>((*iter)[0]);
         auto route_id = static_cast<route_id_t>((*iter)[1]);
 
@@ -68,9 +61,9 @@ void Timetable::parse_stop_routes() {
 }
 
 void Timetable::parse_transfers() {
-    std::ifstream transfers_file = read_dataset_file("transfers_transitive.txt");
+    auto transfers_file = read_dataset_file<igzstream>("transfers_transitive.gz");
 
-    for (CSVIterator<uint32_t> iter {transfers_file}; iter != CSVIterator<uint32_t>(); ++iter) {
+    for (CSVIterator<uint32_t> iter {transfers_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto from = static_cast<stop_id_t>((*iter)[0]);
         auto to = static_cast<stop_id_t>((*iter)[1]);
         auto time = static_cast<_time_t>((*iter)[2]);
@@ -83,9 +76,9 @@ void Timetable::parse_transfers() {
 }
 
 void Timetable::parse_stop_times() {
-    std::ifstream stop_times_file = read_dataset_file("stop_times.txt");
+    auto stop_times_file = read_dataset_file<igzstream>("stop_times.gz");
 
-    for (CSVIterator<uint32_t> iter {stop_times_file}; iter != CSVIterator<uint32_t>(); ++iter) {
+    for (CSVIterator<uint32_t> iter {stop_times_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto trip_id = static_cast<trip_id_t>((*iter)[0]);
         auto arr = static_cast<_time_t>((*iter)[1]);
         auto dep = static_cast<_time_t>((*iter)[2]);
