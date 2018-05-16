@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "raptor.hpp"
+#include "utilities.hpp"
 
 bool Raptor::validate_input() {
     size_t max_stop_id = timetable->stops().size();
@@ -31,6 +32,8 @@ bool Raptor::validate_input() {
 
 // Check is stop1 comes before stop2 in the route
 bool Raptor::check_stops_order(const route_id_t& route, const stop_id_t& stop1, const stop_id_t& stop2) {
+    Profiler prof {__func__};
+
     const std::vector<stop_id_t>& stops = timetable->routes(route).stops;
     auto idx1 = std::find(stops.begin(), stops.end(), stop1) - stops.begin();
     auto idx2 = std::find(stops.begin(), stops.end(), stop2) - stops.begin();
@@ -44,6 +47,8 @@ bool Raptor::check_stops_order(const route_id_t& route, const stop_id_t& stop1, 
 }
 
 route_stop_queue_t Raptor::make_queue() {
+    Profiler prof {__func__};
+
     route_stop_queue_t queue;
 
     for (const auto& stop_id: marked_stops) {
@@ -79,6 +84,8 @@ route_stop_queue_t Raptor::make_queue() {
 // Find the earliest trip in route r that one can catch at stop s in round k,
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s)
 trip_id_t Raptor::earliest_trip(const int& round, const route_id_t& route_id, const stop_id_t& stop_id) {
+    Profiler prof {__func__};
+
     const auto& route = timetable->routes(route_id);
 
     _time_t t = labels[stop_id][round - 1];
@@ -181,5 +188,6 @@ std::vector<_time_t> Raptor::raptor() {
         if (marked_stops.empty()) break;
     }
 
+    Profiler::report();
     return labels[target];
 }
