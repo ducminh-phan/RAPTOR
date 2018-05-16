@@ -7,8 +7,7 @@
 
 #include "data_structure.hpp"
 
-using route_stop_t = std::pair<route_id_t, stop_id_t>;
-using route_stop_queue_t = std::vector<route_stop_t>;
+using route_stop_queue_t = std::unordered_map<route_id_t, std::unordered_set<stop_id_t>>;
 
 class Raptor {
 private:
@@ -34,8 +33,5 @@ public:
 
     std::vector<_time_t> raptor();
 };
-
-route_stop_queue_t::iterator find(route_stop_queue_t::iterator& first, const route_stop_queue_t::iterator& last,
-                                  const route_id_t& route, const stop_id_t& stop);
 
 #endif // RAPTOR_HPP
