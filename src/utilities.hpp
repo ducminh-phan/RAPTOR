@@ -4,6 +4,8 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <string>
+#include <unordered_map>
 
 void check_file_exists(std::istream& file, const std::string& name);
 
@@ -30,6 +32,34 @@ public:
     }
 
     const std::string& unit() { return m_unit; }
+};
+
+class Profiler {
+private:
+    static std::unordered_map<std::string, double> m_time_log;
+    static std::unordered_map<std::string, int> m_call_log;
+    std::string m_name;
+    Timer m_timer;
+
+public:
+    explicit Profiler(std::string name) : m_name {std::move(name)}, m_timer() {};
+
+    ~Profiler() {
+        m_time_log[m_name] += m_timer.elapsed();
+        m_call_log[m_name] += 1;
+    }
+
+    static void report() {
+        std::cout << std::string(80, '-') << std::endl;
+
+        for (const auto& kv: m_time_log) {
+            std::cout << "Function " << kv.first << ":" << std::endl;
+            std::cout << "\tCalled: " << m_call_log[kv.first] << " times" << std::endl;
+            std::cout << "\tCPU time: " << kv.second << Timer().unit() << std::endl;
+        }
+
+        std::cout << std::string(80, '-') << std::endl;
+    }
 };
 
 #endif // UTILITIES_HPP

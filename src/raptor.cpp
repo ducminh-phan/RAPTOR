@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "raptor.hpp"
+#include "utilities.hpp"
 
 bool Raptor::validate_input() {
     size_t max_stop_id = timetable->stops().size();
@@ -29,20 +30,10 @@ bool Raptor::validate_input() {
     return true;
 }
 
-// Find if (r, p') in Q for some stop p' != p, start the search from the begin iterator,
-// the search ends when we reach the end iterator of the queue
-route_stop_queue_t::iterator find(route_stop_queue_t::iterator& first, const route_stop_queue_t::iterator& last,
-                                  const route_id_t& route, const stop_id_t& stop) {
-    while (first != last) {
-        if ((first->first == route) && (first->second != stop)) return first;
-        ++first;
-    }
-
-    return last;
-}
-
 // Check is stop1 comes before stop2 in the route
 bool Raptor::check_stops_order(const route_id_t& route, const stop_id_t& stop1, const stop_id_t& stop2) {
+    Profiler prof {__func__};
+
     const std::vector<stop_id_t>& stops = timetable->routes(route).stops;
     auto idx1 = std::find(stops.begin(), stops.end(), stop1) - stops.begin();
     auto idx2 = std::find(stops.begin(), stops.end(), stop2) - stops.begin();
@@ -56,6 +47,8 @@ bool Raptor::check_stops_order(const route_id_t& route, const stop_id_t& stop1, 
 }
 
 route_stop_queue_t Raptor::make_queue() {
+    Profiler prof {__func__};
+
     route_stop_queue_t queue;
 
     for (const auto& stop_id: marked_stops) {
@@ -63,26 +56,23 @@ route_stop_queue_t Raptor::make_queue() {
 
         for (const auto& route: stop.routes) {
             bool found = false;
-            auto iter = queue.begin();
+            auto route_iter = queue.find(route);
 
-            while (true) {
-                // Check if (r, p') in Q for some stop p' != p
-                iter = find(iter, queue.end(), route, stop_id);
-                if (iter == queue.end()) break;
+            // There are some (r, p) in the queue
+            if (route_iter != queue.end()) {
+                // Iterate over all p to find if there are stops come after s
+                for (const auto& p: route_iter->second) {
+                    if (check_stops_order(route, stop_id, p)) {
+                        // Replace (r, p) by (r, s)
+                        route_iter->second.erase(p);
+                        route_iter->second.insert(stop_id);
 
-                found = true;
-
-                // If p comes before p' in r, then substitute (r, p') by (r, p)
-                if (check_stops_order(route, stop_id, iter->second)) {
-                    iter->second = stop_id;
-                } else {
-                    // If p comes after p', increment the iterator to start the next search
-                    // from the next element in the queue
-                    ++iter;
+                        found = true;
+                    }
                 }
             }
 
-            if (!found) queue.emplace_back(route, stop_id);
+            if (!found) queue[route].insert(stop_id);
         }
     }
 
@@ -93,7 +83,20 @@ route_stop_queue_t Raptor::make_queue() {
 
 // Find the earliest trip in route r that one can catch at stop s in round k,
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s)
-trip_id_t Raptor::earliest_trip(const int& round, const route_id_t& route_id, const stop_id_t& stop_id) {
+trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_id, const stop_id_t& stop_id) {
+    static std::unordered_map<key_t, trip_id_t, key_hash> cache;
+
+    auto* prof_c = new Profiler {"cached"};
+    auto key = std::make_tuple(round, route_id, stop_id);
+    auto search = cache.find(key);
+    if (search != cache.end()) {
+        delete prof_c;
+        return search->second;
+    }
+
+    delete prof_c;
+
+    Profiler prof {__func__};
     const auto& route = timetable->routes(route_id);
 
     _time_t t = labels[stop_id][round - 1];
@@ -107,10 +110,15 @@ trip_id_t Raptor::earliest_trip(const int& round, const route_id_t& route_id, co
         // The departure time of the current trip at stop_id
         _time_t dep = (*iter)[stop_idx].dep;
 
-        if (dep >= t) return route.trips[iter - stop_times.begin()];
+        if (dep >= t) {
+            trip_id_t r = route.trips[iter - stop_times.begin()];
+            cache[key] = r;
+            return r;
+        }
         ++iter;
     }
 
+    cache[key] = null_trip;
     return null_trip;
 }
 
@@ -125,7 +133,7 @@ std::vector<_time_t> Raptor::raptor() {
     labels[source] = {dep};
     marked_stops.insert(source);
 
-    int round {1};
+    uint16_t round {1};
     while (true) {
         // First stage, set an upper bound on the earliest arrival time at every stop
         // by copying the arrival time from the previous round
@@ -139,38 +147,40 @@ std::vector<_time_t> Raptor::raptor() {
         // Traverse each route
         for (const auto& route_stop: queue) {
             auto route_id = route_stop.first;
-            auto stop_id = route_stop.second;
-            auto& route = timetable->routes(route_id);
 
-            trip_id_t t = null_trip;
-            size_t stop_idx = route.stop_positions.at(stop_id);
+            for (const auto& stop_id: route_stop.second) {
+                auto& route = timetable->routes(route_id);
 
-            // Iterate over the stops of the route beginning with stop_id
-            for (size_t i = stop_idx; i < route.stops.size(); ++i) {
-                stop_id_t p_i = route.stops[i];
-                size_t p_i_idx = route.stop_positions.at(p_i);
-                _time_t dep;
+                trip_id_t t = null_trip;
+                size_t stop_idx = route.stop_positions.at(stop_id);
 
-                if (t != null_trip) {
-                    // Get the position of the trip t
-                    trip_pos_t trip_pos = timetable->trip_positions(t);
-                    size_t pos = trip_pos.second;
+                // Iterate over the stops of the route beginning with stop_id
+                for (size_t i = stop_idx; i < route.stops.size(); ++i) {
+                    stop_id_t p_i = route.stops[i];
+                    size_t p_i_idx = route.stop_positions.at(p_i);
+                    _time_t dep;
 
-                    // Get the departure and arrival time of the trip t at the stop p_i
-                    dep = route.stop_times[pos][p_i_idx].dep;
-                    _time_t arr = route.stop_times[pos][p_i_idx].arr;
+                    if (t != null_trip) {
+                        // Get the position of the trip t
+                        trip_pos_t trip_pos = timetable->trip_positions(t);
+                        size_t pos = trip_pos.second;
 
-                    // Local and target pruning
-                    if (arr < std::min(earliest_arrival_time[p_i], earliest_arrival_time[target])) {
-                        labels[p_i][round] = arr;
-                        earliest_arrival_time[p_i] = arr;
-                        marked_stops.insert(p_i);
+                        // Get the departure and arrival time of the trip t at the stop p_i
+                        dep = route.stop_times[pos][p_i_idx].dep;
+                        _time_t arr = route.stop_times[pos][p_i_idx].arr;
+
+                        // Local and target pruning
+                        if (arr < std::min(earliest_arrival_time[p_i], earliest_arrival_time[target])) {
+                            labels[p_i][round] = arr;
+                            earliest_arrival_time[p_i] = arr;
+                            marked_stops.insert(p_i);
+                        }
                     }
-                }
 
-                // Check if we can catch an earlier trip at p_i
-                if (labels[p_i][round - 1] <= dep) {
-                    t = earliest_trip(round, route_id, p_i);
+                    // Check if we can catch an earlier trip at p_i
+                    if (labels[p_i][round - 1] <= dep) {
+                        t = earliest_trip(round, route_id, p_i);
+                    }
                 }
             }
         }
@@ -194,5 +204,6 @@ std::vector<_time_t> Raptor::raptor() {
         if (marked_stops.empty()) break;
     }
 
+    Profiler::report();
     return labels[target];
 }
