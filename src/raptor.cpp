@@ -60,19 +60,28 @@ route_stop_queue_t Raptor::make_queue() {
 
             // There are some (r, p) in the queue
             if (route_iter != queue.end()) {
+                std::vector<stop_id_t> stops_to_erase;
+
                 // Iterate over all p to find if there are stops come after s
                 for (const auto& p: route_iter->second) {
                     if (check_stops_order(route, stop_id, p)) {
-                        // Replace (r, p) by (r, s)
-                        route_iter->second.erase(p);
-                        route_iter->second.insert(stop_id);
+                        // Add p to the list of stops to be erased later, we do this
+                        // in order to avoid modifying a set while iterating over it
+                        stops_to_erase.push_back(p);
 
                         found = true;
                     }
                 }
+
+                // Remove all stops that are in the queue coming after stop_id in the route, if any
+                if (found) {
+                    for (const auto& p: stops_to_erase) {
+                        route_iter->second.erase(p);
+                    }
+                }
             }
 
-            if (!found) queue[route].insert(stop_id);
+            queue[route].insert(stop_id);
         }
     }
 
