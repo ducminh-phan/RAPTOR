@@ -1,14 +1,14 @@
 #ifndef RAPTOR_HPP
 #define RAPTOR_HPP
 
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility> // std::pair
 
 #include "data_structure.hpp"
 
-using route_stop_t = std::pair<route_id_t, stop_id_t>;
-using route_stop_queue_t = std::vector<route_stop_t>;
+using route_stop_queue_t = std::unordered_map<route_id_t, std::unordered_set<stop_id_t>>;
 
 class Raptor {
 private:
@@ -26,7 +26,7 @@ private:
 
     route_stop_queue_t make_queue();
 
-    trip_id_t earliest_trip(const int& round, const route_id_t& route_id, const stop_id_t& stop_id);
+    trip_id_t earliest_trip(const uint16_t& round, const route_id_t& route_id, const stop_id_t& stop_id);
 
 public:
     Raptor(Timetable* timetable_, stop_id_t source_id, stop_id_t target_id, _time_t departure) :
@@ -35,7 +35,12 @@ public:
     std::vector<_time_t> raptor();
 };
 
-route_stop_queue_t::iterator find(route_stop_queue_t::iterator& first, const route_stop_queue_t::iterator& last,
-                                  const route_id_t& route, const stop_id_t& stop);
+using key_t = std::tuple<uint16_t, route_id_t, stop_id_t>;
+
+struct key_hash : public std::unary_function<key_t, size_t> {
+    size_t operator()(const key_t& k) const {
+        return std::get<0>(k) ^ std::get<1>(k) ^ std::get<2>(k);
+    }
+};
 
 #endif // RAPTOR_HPP

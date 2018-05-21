@@ -70,7 +70,6 @@ void Timetable::parse_transfers() {
 
         if (m_stops[from].is_valid() && m_stops[to].is_valid()) {
             m_stops[from].transfers.emplace_back(to, time);
-            m_stops[to].transfers.emplace_back(from, time);
         }
     }
 }
@@ -132,7 +131,7 @@ void Timetable::summary() {
         count_transfers += stop.transfers.size();
     }
     std::cout << count_stops << " stops" << std::endl;
-    std::cout << count_transfers / 2 << " transfers" << std::endl;
+    std::cout << count_transfers << " transfers" << std::endl;
 
     std::cout << count_stop_times << " events" << std::endl;
 
