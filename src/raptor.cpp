@@ -83,9 +83,20 @@ route_stop_queue_t Raptor::make_queue() {
 
 // Find the earliest trip in route r that one can catch at stop s in round k,
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s)
-trip_id_t Raptor::earliest_trip(const int& round, const route_id_t& route_id, const stop_id_t& stop_id) {
-    Profiler prof {__func__};
+trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_id, const stop_id_t& stop_id) {
+    static std::unordered_map<key_t, trip_id_t, key_hash> cache;
 
+    auto* prof_c = new Profiler {"cached"};
+    auto key = std::make_tuple(round, route_id, stop_id);
+    auto search = cache.find(key);
+    if (search != cache.end()) {
+        delete prof_c;
+        return search->second;
+    }
+
+    delete prof_c;
+
+    Profiler prof {__func__};
     const auto& route = timetable->routes(route_id);
 
     _time_t t = labels[stop_id][round - 1];
@@ -99,10 +110,15 @@ trip_id_t Raptor::earliest_trip(const int& round, const route_id_t& route_id, co
         // The departure time of the current trip at stop_id
         _time_t dep = (*iter)[stop_idx].dep;
 
-        if (dep >= t) return route.trips[iter - stop_times.begin()];
+        if (dep >= t) {
+            trip_id_t r = route.trips[iter - stop_times.begin()];
+            cache[key] = r;
+            return r;
+        }
         ++iter;
     }
 
+    cache[key] = null_trip;
     return null_trip;
 }
 
@@ -117,7 +133,7 @@ std::vector<_time_t> Raptor::raptor() {
     labels[source] = {dep};
     marked_stops.insert(source);
 
-    int round {1};
+    uint16_t round {1};
     while (true) {
         // First stage, set an upper bound on the earliest arrival time at every stop
         // by copying the arrival time from the previous round
