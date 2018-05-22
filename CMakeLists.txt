@@ -11,5 +11,5 @@ add_executable(raptor
         src/data_structure.cpp src/data_structure.hpp
         src/utilities.cpp src/utilities.hpp
         src/raptor.cpp src/raptor.hpp
-)
+        src/bag.cpp src/bag.hpp)
 target_link_libraries(raptor z)
