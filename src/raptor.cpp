@@ -2,7 +2,6 @@
 #include <iostream>
 
 #include "raptor.hpp"
-#include "utilities.hpp"
 
 bool Raptor::validate_input() {
     size_t max_stop_id = timetable->stops().size();
@@ -31,17 +30,12 @@ bool Raptor::validate_input() {
 }
 
 // Check is stop1 comes before stop2 in the route
-bool Raptor::check_stops_order(const route_id_t& route, const stop_id_t& stop1, const stop_id_t& stop2) {
+bool Raptor::check_stops_order(const route_id_t& route_id, const stop_id_t& stop1, const stop_id_t& stop2) {
     Profiler prof {__func__};
 
-    const std::vector<stop_id_t>& stops = timetable->routes(route).stops;
-    auto idx1 = std::find(stops.begin(), stops.end(), stop1) - stops.begin();
-    auto idx2 = std::find(stops.begin(), stops.end(), stop2) - stops.begin();
-
-    if (idx1 >= stops.size() || idx2 >= stops.size()) {
-        std::cerr << "The stops do not belong to the route" << std::endl;
-        return false;
-    }
+    const auto& route = timetable->routes(route_id);
+    const auto& idx1 = route.stop_positions.at(stop1);
+    const auto& idx2 = route.stop_positions.at(stop2);
 
     return idx1 < idx2;
 }
