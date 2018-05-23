@@ -88,9 +88,15 @@ route_stop_queue_t Raptor::make_queue() {
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s)
 trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_id, const stop_id_t& stop_id) {
     static std::unordered_map<key_t, trip_id_t, key_hash> cache;
+    _time_t t = labels[stop_id][round - 1];
 
     auto* prof_c = new Profiler {"cached"};
-    auto key = std::make_tuple(round, route_id, stop_id);
+
+    // We make the label of the stop as a part of the key, instead of the round.
+    // This speeds up the function since the label could be the same in several rounds,
+    // so that we do not need to find the earliest trip again in another round if the
+    // label remains the same.
+    auto key = std::make_tuple(t.val(), route_id, stop_id);
     auto search = cache.find(key);
     if (search != cache.end()) {
         delete prof_c;
@@ -102,7 +108,6 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_i
     Profiler prof {__func__};
     const auto& route = timetable->routes(route_id);
 
-    _time_t t = labels[stop_id][round - 1];
     const auto& stop_times = route.stop_times;
     auto iter = stop_times.begin();
     auto last = stop_times.end();

@@ -36,7 +36,7 @@ public:
     std::vector<_time_t> raptor();
 };
 
-using key_t = std::tuple<uint16_t, route_id_t, stop_id_t>;
+using key_t = std::tuple<_time_t::value_type, route_id_t, stop_id_t>;
 
 struct key_hash : public std::unary_function<key_t, size_t> {
     size_t operator()(const key_t& k) const {

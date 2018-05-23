@@ -19,9 +19,9 @@ using trip_pos_t = std::pair<route_id_t, size_t>;
 extern const trip_id_t null_trip;
 
 class _time_t {
-private:
+public:
     using value_type = uint32_t;
-
+private:
     value_type m_val;
 public:
     const static value_type inf = std::numeric_limits<value_type>::max();
@@ -29,6 +29,8 @@ public:
     _time_t() : m_val {inf} {};
 
     _time_t(value_type val_) : m_val {val_} {}
+
+    const value_type& val() { return m_val; }
 
     friend _time_t operator+(const _time_t& t1, const _time_t t2) { return {t1.m_val + t2.m_val}; }
 
