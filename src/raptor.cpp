@@ -2,7 +2,6 @@
 #include <iostream>
 
 #include "raptor.hpp"
-#include "utilities.hpp"
 
 bool Raptor::validate_input() {
     size_t max_stop_id = timetable->stops().size();
@@ -31,17 +30,12 @@ bool Raptor::validate_input() {
 }
 
 // Check is stop1 comes before stop2 in the route
-bool Raptor::check_stops_order(const route_id_t& route, const stop_id_t& stop1, const stop_id_t& stop2) {
+bool Raptor::check_stops_order(const route_id_t& route_id, const stop_id_t& stop1, const stop_id_t& stop2) {
     Profiler prof {__func__};
 
-    const std::vector<stop_id_t>& stops = timetable->routes(route).stops;
-    auto idx1 = std::find(stops.begin(), stops.end(), stop1) - stops.begin();
-    auto idx2 = std::find(stops.begin(), stops.end(), stop2) - stops.begin();
-
-    if (idx1 >= stops.size() || idx2 >= stops.size()) {
-        std::cerr << "The stops do not belong to the route" << std::endl;
-        return false;
-    }
+    const auto& route = timetable->routes(route_id);
+    const auto& idx1 = route.stop_positions.at(stop1).front();
+    const auto& idx2 = route.stop_positions.at(stop2).front();
 
     return idx1 < idx2;
 }
@@ -94,9 +88,15 @@ route_stop_queue_t Raptor::make_queue() {
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s)
 trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_id, const stop_id_t& stop_id) {
     static std::unordered_map<key_t, trip_id_t, key_hash> cache;
+    _time_t t = labels[stop_id][round - 1];
 
     auto* prof_c = new Profiler {"cached"};
-    auto key = std::make_tuple(round, route_id, stop_id);
+
+    // We make the label of the stop as a part of the key, instead of the round.
+    // This speeds up the function since the label could be the same in several rounds,
+    // so that we do not need to find the earliest trip again in another round if the
+    // label remains the same.
+    auto key = std::make_tuple(t.val(), route_id, stop_id);
     auto search = cache.find(key);
     if (search != cache.end()) {
         delete prof_c;
@@ -108,22 +108,26 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_i
     Profiler prof {__func__};
     const auto& route = timetable->routes(route_id);
 
-    _time_t t = labels[stop_id][round - 1];
-    const auto stop_times = route.stop_times;
+    const auto& stop_times = route.stop_times;
     auto iter = stop_times.begin();
     auto last = stop_times.end();
-    size_t stop_idx = route.stop_positions.at(stop_id);
+    std::vector<size_t> stop_idx = route.stop_positions.at(stop_id);
 
     // Iterate over the trips
     while (iter != last) {
-        // The departure time of the current trip at stop_id
-        _time_t dep = (*iter)[stop_idx].dep;
+        trip_id_t r = route.trips[iter - stop_times.begin()];
 
-        if (dep >= t) {
-            trip_id_t r = route.trips[iter - stop_times.begin()];
-            cache[key] = r;
-            return r;
+        // Iterate over the appearances of the stop in the trip
+        for (const auto& idx: stop_idx) {
+            // The departure time of the current trip at stop_id
+            const _time_t& dep = (*iter).at(idx).dep;
+
+            if (dep >= t) {
+                cache[key] = r;
+                return r;
+            }
         }
+
         ++iter;
     }
 
@@ -161,13 +165,12 @@ std::vector<_time_t> Raptor::raptor() {
                 auto& route = timetable->routes(route_id);
 
                 trip_id_t t = null_trip;
-                size_t stop_idx = route.stop_positions.at(stop_id);
+                size_t stop_idx = route.stop_positions.at(stop_id).front();
 
                 // Iterate over the stops of the route beginning with stop_id
                 for (size_t i = stop_idx; i < route.stops.size(); ++i) {
                     stop_id_t p_i = route.stops[i];
-                    size_t p_i_idx = route.stop_positions.at(p_i);
-                    _time_t dep;
+                    _time_t dep, arr;
 
                     if (t != null_trip) {
                         // Get the position of the trip t
@@ -175,8 +178,8 @@ std::vector<_time_t> Raptor::raptor() {
                         size_t pos = trip_pos.second;
 
                         // Get the departure and arrival time of the trip t at the stop p_i
-                        dep = route.stop_times[pos][p_i_idx].dep;
-                        _time_t arr = route.stop_times[pos][p_i_idx].arr;
+                        dep = route.stop_times[pos][i].dep;
+                        arr = route.stop_times[pos][i].arr;
 
                         // Local and target pruning
                         if (arr < std::min(earliest_arrival_time[p_i], earliest_arrival_time[target])) {

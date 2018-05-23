@@ -4,6 +4,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+#include <set>
 #include <utility> // std::pair
 
 #include "data_structure.hpp"
@@ -16,7 +17,7 @@ private:
     const _time_t dep;
     const stop_id_t source;
     const stop_id_t target;
-    std::unordered_set<stop_id_t> marked_stops;
+    std::set<stop_id_t> marked_stops;
     std::unordered_map<stop_id_t, _time_t> earliest_arrival_time;
     std::unordered_map<stop_id_t, std::vector<_time_t>> labels;
 
@@ -35,7 +36,7 @@ public:
     std::vector<_time_t> raptor();
 };
 
-using key_t = std::tuple<uint16_t, route_id_t, stop_id_t>;
+using key_t = std::tuple<_time_t::value_type, route_id_t, stop_id_t>;
 
 struct key_hash : public std::unary_function<key_t, size_t> {
     size_t operator()(const key_t& k) const {
