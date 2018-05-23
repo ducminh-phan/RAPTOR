@@ -4,6 +4,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+#include <set>
 #include <utility> // std::pair
 
 #include "data_structure.hpp"
@@ -16,7 +17,7 @@ private:
     const _time_t dep;
     const stop_id_t source;
     const stop_id_t target;
-    std::unordered_set<stop_id_t> marked_stops;
+    std::set<stop_id_t> marked_stops;
     std::unordered_map<stop_id_t, _time_t> earliest_arrival_time;
     std::unordered_map<stop_id_t, std::vector<_time_t>> labels;
 
