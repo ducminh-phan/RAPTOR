@@ -76,7 +76,7 @@ struct Route {
     std::vector<trip_id_t> trips;
     std::vector<stop_id_t> stops;
     std::vector<std::vector<StopTime>> stop_times;
-    std::unordered_map<stop_id_t, size_t> stop_positions;
+    std::unordered_map<stop_id_t, std::vector<size_t>> stop_positions;
 };
 
 class Timetable {

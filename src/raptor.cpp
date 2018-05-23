@@ -34,8 +34,8 @@ bool Raptor::check_stops_order(const route_id_t& route_id, const stop_id_t& stop
     Profiler prof {__func__};
 
     const auto& route = timetable->routes(route_id);
-    const auto& idx1 = route.stop_positions.at(stop1);
-    const auto& idx2 = route.stop_positions.at(stop2);
+    const auto& idx1 = route.stop_positions.at(stop1).front();
+    const auto& idx2 = route.stop_positions.at(stop2).front();
 
     return idx1 < idx2;
 }
@@ -103,21 +103,26 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_i
     const auto& route = timetable->routes(route_id);
 
     _time_t t = labels[stop_id][round - 1];
-    const auto stop_times = route.stop_times;
+    const auto& stop_times = route.stop_times;
     auto iter = stop_times.begin();
     auto last = stop_times.end();
-    size_t stop_idx = route.stop_positions.at(stop_id);
+    std::vector<size_t> stop_idx = route.stop_positions.at(stop_id);
 
     // Iterate over the trips
     while (iter != last) {
-        // The departure time of the current trip at stop_id
-        _time_t dep = (*iter)[stop_idx].dep;
+        trip_id_t r = route.trips[iter - stop_times.begin()];
 
-        if (dep >= t) {
-            trip_id_t r = route.trips[iter - stop_times.begin()];
-            cache[key] = r;
-            return r;
+        // Iterate over the appearances of the stop in the trip
+        for (const auto& idx: stop_idx) {
+            // The departure time of the current trip at stop_id
+            const _time_t& dep = (*iter).at(idx).dep;
+
+            if (dep >= t) {
+                cache[key] = r;
+                return r;
+            }
         }
+
         ++iter;
     }
 
@@ -155,13 +160,12 @@ std::vector<_time_t> Raptor::raptor() {
                 auto& route = timetable->routes(route_id);
 
                 trip_id_t t = null_trip;
-                size_t stop_idx = route.stop_positions.at(stop_id);
+                size_t stop_idx = route.stop_positions.at(stop_id).front();
 
                 // Iterate over the stops of the route beginning with stop_id
                 for (size_t i = stop_idx; i < route.stops.size(); ++i) {
                     stop_id_t p_i = route.stops[i];
-                    size_t p_i_idx = route.stop_positions.at(p_i);
-                    _time_t dep;
+                    _time_t dep, arr;
 
                     if (t != null_trip) {
                         // Get the position of the trip t
@@ -169,8 +173,8 @@ std::vector<_time_t> Raptor::raptor() {
                         size_t pos = trip_pos.second;
 
                         // Get the departure and arrival time of the trip t at the stop p_i
-                        dep = route.stop_times[pos][p_i_idx].dep;
-                        _time_t arr = route.stop_times[pos][p_i_idx].arr;
+                        dep = route.stop_times[pos][i].dep;
+                        arr = route.stop_times[pos][i].arr;
 
                         // Local and target pruning
                         if (arr < std::min(earliest_arrival_time[p_i], earliest_arrival_time[target])) {
