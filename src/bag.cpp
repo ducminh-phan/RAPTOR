@@ -35,3 +35,9 @@ void Bag::insert(const _time_t& t, const _time_t& w) {
     Label in_label {t, w};
     this->insert(in_label);
 }
+
+void Bag::merge(const Bag& other) {
+    for (const auto& label: other._labels) {
+        this->insert(label);
+    }
+}

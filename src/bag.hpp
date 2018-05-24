@@ -39,6 +39,8 @@ public:
     void insert(const _time_t& t, const _time_t& w);
 
     std::set<Label> labels() { return _labels; };
+
+    void merge(const Bag& other);
 };
 
 #endif // BAG_HPP
