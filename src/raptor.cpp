@@ -49,33 +49,20 @@ route_stop_queue_t Raptor::make_queue() {
         const Stop& stop = timetable->stops(stop_id);
 
         for (const auto& route: stop.routes) {
-            bool found = false;
             auto route_iter = queue.find(route);
 
-            // There are some (r, p) in the queue
+            // Check if there is already a pair (r, p) in the queue
             if (route_iter != queue.end()) {
-                std::vector<stop_id_t> stops_to_erase;
+                auto p = route_iter->second;
 
-                // Iterate over all p to find if there are stops come after s
-                for (const auto& p: route_iter->second) {
-                    if (check_stops_order(route, stop_id, p)) {
-                        // Add p to the list of stops to be erased later, we do this
-                        // in order to avoid modifying a set while iterating over it
-                        stops_to_erase.push_back(p);
-
-                        found = true;
-                    }
+                // If s comes before p, replace p by s
+                if (check_stops_order(route, stop_id, p)) {
+                    queue[route] = stop_id;
                 }
-
-                // Remove all stops that are in the queue coming after stop_id in the route, if any
-                if (found) {
-                    for (const auto& p: stops_to_erase) {
-                        route_iter->second.erase(p);
-                    }
-                }
+            } else {
+                // If r is not in the queue, add (r, s) to the queue
+                queue[route] = stop_id;
             }
-
-            queue[route].insert(stop_id);
         }
     }
 
@@ -160,39 +147,37 @@ std::vector<_time_t> Raptor::raptor() {
         // Traverse each route
         for (const auto& route_stop: queue) {
             auto route_id = route_stop.first;
+            auto stop_id = route_stop.second;
+            auto& route = timetable->routes(route_id);
 
-            for (const auto& stop_id: route_stop.second) {
-                auto& route = timetable->routes(route_id);
+            trip_id_t t = null_trip;
+            size_t stop_idx = route.stop_positions.at(stop_id).front();
 
-                trip_id_t t = null_trip;
-                size_t stop_idx = route.stop_positions.at(stop_id).front();
+            // Iterate over the stops of the route beginning with stop_id
+            for (size_t i = stop_idx; i < route.stops.size(); ++i) {
+                stop_id_t p_i = route.stops[i];
+                _time_t dep, arr;
 
-                // Iterate over the stops of the route beginning with stop_id
-                for (size_t i = stop_idx; i < route.stops.size(); ++i) {
-                    stop_id_t p_i = route.stops[i];
-                    _time_t dep, arr;
+                if (t != null_trip) {
+                    // Get the position of the trip t
+                    trip_pos_t trip_pos = timetable->trip_positions(t);
+                    size_t pos = trip_pos.second;
 
-                    if (t != null_trip) {
-                        // Get the position of the trip t
-                        trip_pos_t trip_pos = timetable->trip_positions(t);
-                        size_t pos = trip_pos.second;
+                    // Get the departure and arrival time of the trip t at the stop p_i
+                    dep = route.stop_times[pos][i].dep;
+                    arr = route.stop_times[pos][i].arr;
 
-                        // Get the departure and arrival time of the trip t at the stop p_i
-                        dep = route.stop_times[pos][i].dep;
-                        arr = route.stop_times[pos][i].arr;
-
-                        // Local and target pruning
-                        if (arr < std::min(earliest_arrival_time[p_i], earliest_arrival_time[target])) {
-                            labels[p_i][round] = arr;
-                            earliest_arrival_time[p_i] = arr;
-                            marked_stops.insert(p_i);
-                        }
+                    // Local and target pruning
+                    if (arr < std::min(earliest_arrival_time[p_i], earliest_arrival_time[target])) {
+                        labels[p_i][round] = arr;
+                        earliest_arrival_time[p_i] = arr;
+                        marked_stops.insert(p_i);
                     }
+                }
 
-                    // Check if we can catch an earlier trip at p_i
-                    if (labels[p_i][round - 1] <= dep) {
-                        t = earliest_trip(round, route_id, p_i);
-                    }
+                // Check if we can catch an earlier trip at p_i
+                if (labels[p_i][round - 1] <= dep) {
+                    t = earliest_trip(round, route_id, p_i);
                 }
             }
         }

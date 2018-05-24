@@ -9,7 +9,7 @@
 
 #include "data_structure.hpp"
 
-using route_stop_queue_t = std::unordered_map<route_id_t, std::unordered_set<stop_id_t>>;
+using route_stop_queue_t = std::unordered_map<route_id_t, stop_id_t>;
 
 class Raptor {
 private:
