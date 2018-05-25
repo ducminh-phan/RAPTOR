@@ -74,7 +74,7 @@ route_stop_queue_t Raptor::make_queue() {
 // Find the earliest trip in route r that one can catch at stop s in round k,
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s)
 trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_id, const stop_id_t& stop_id) {
-    static std::unordered_map<key_t, trip_id_t, key_hash> cache;
+    static std::unordered_map<cache_key_t, trip_id_t, cache_key_hash> cache;
     _time_t t = labels[stop_id][round - 1];
 
     auto* prof_c = new Profiler {"cached"};

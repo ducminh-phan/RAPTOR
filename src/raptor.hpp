@@ -36,10 +36,10 @@ public:
     std::vector<_time_t> raptor();
 };
 
-using key_t = std::tuple<_time_t::value_type, route_id_t, stop_id_t>;
+using cache_key_t = std::tuple<_time_t::value_type, route_id_t, stop_id_t>;
 
-struct key_hash : public std::unary_function<key_t, size_t> {
-    size_t operator()(const key_t& k) const {
+struct cache_key_hash : public std::unary_function<cache_key_t, size_t> {
+    size_t operator()(const cache_key_t& k) const {
         return std::get<0>(k) ^ std::get<1>(k) ^ std::get<2>(k);
     }
 };
