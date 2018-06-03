@@ -1,5 +1,3 @@
-#include <tuple>
-
 #include "data_structure.hpp"
 #include "csv_reader.hpp"
 #include "gzstream.h"
@@ -106,7 +104,7 @@ void Timetable::summary() {
     std::cout << std::string(80, '-') << std::endl;
 
     std::cout << "Summary of the dataset:" << std::endl;
-    std::cout << "City: " << m_city_name << std::endl;
+    std::cout << "Name: " << m_name << std::endl;
 
     std::cout << m_routes.size() << " routes" << std::endl;
 

@@ -83,7 +83,7 @@ struct Route {
 
 class Timetable {
 private:
-    std::string m_city_name;
+    std::string m_name;
     std::string m_path;
     std::vector<Route> m_routes;
     std::vector<Stop> m_stops;
@@ -111,7 +111,7 @@ private:
     void parse_stop_times();
 
 public:
-    const std::string& city_name() const { return m_city_name; }
+    const std::string& name() const { return m_name; }
 
     const std::vector<Route>& routes() const { return m_routes; }
 
@@ -123,8 +123,8 @@ public:
 
     const trip_pos_t& trip_positions(trip_id_t trip_id) const { return m_trip_positions.at(trip_id); }
 
-    explicit Timetable(std::string city_name) : m_city_name {std::move(city_name)} {
-        m_path = "../Public-Transit-Data/" + m_city_name + "/";
+    explicit Timetable(std::string city_name) : m_name {std::move(city_name)} {
+        m_path = "../Public-Transit-Data/" + m_name + "/";
         parse_data();
     }
 
