@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "data_structure.hpp"
 #include "csv_reader.hpp"
 #include "gzstream.h"
@@ -11,7 +13,7 @@ void Timetable::parse_data() {
 
     parse_trips();
     parse_stop_routes();
-    parse_transfers();
+    parse_hubs();
     parse_stop_times();
 
     std::cout << "Complete parsing the data." << std::endl;
@@ -44,31 +46,39 @@ void Timetable::parse_stop_routes() {
     auto stop_routes_file = read_dataset_file<igzstream>("stop_routes.gz");
 
     for (CSVIterator<uint32_t> iter {stop_routes_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
-        auto stop_id = static_cast<stop_id_t>((*iter)[0]);
+        auto stop_id = static_cast<node_id_t>((*iter)[0]);
         auto route_id = static_cast<route_id_t>((*iter)[1]);
 
         // Add a new stop if we encounter a new id,
         // note that we might have a missing id, e.g., there is no route using stop #1674
         while (m_stops.size() <= stop_id) {
             m_stops.emplace_back();
-            m_stops.back().id = static_cast<stop_id_t>(m_stops.size() - 1);
+            m_stops.back().id = static_cast<node_id_t>(m_stops.size() - 1);
         }
 
         m_stops[stop_id].routes.push_back(route_id);
     }
 }
 
-void Timetable::parse_transfers() {
-    auto transfers_file = read_dataset_file<igzstream>("transfers_transitive.gz");
+void Timetable::parse_hubs() {
+    auto in_hub_file = read_dataset_file<igzstream>("in_hub.gr.gz");
 
-    for (CSVIterator<uint32_t> iter {transfers_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
-        auto from = static_cast<stop_id_t>((*iter)[0]);
-        auto to = static_cast<stop_id_t>((*iter)[1]);
-        auto time = static_cast<_time_t>((*iter)[2]);
+    for (CSVIterator<uint32_t> iter {in_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
+        auto node_id = static_cast<node_id_t>((*iter)[0]);
+        auto stop_id = static_cast<node_id_t>((*iter)[1]);
+        auto distance = (*iter)[2];
 
-        if (m_stops[from].is_valid() && m_stops[to].is_valid()) {
-            m_stops[from].transfers.emplace_back(to, time);
-        }
+        m_stops[stop_id].in_hubs.emplace(node_id, distance_to_time(distance));
+    }
+
+    auto out_hub_file = read_dataset_file<igzstream>("out_hub.gr.gz");
+
+    for (CSVIterator<uint32_t> iter {out_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
+        auto stop_id = static_cast<node_id_t>((*iter)[0]);
+        auto node_id = static_cast<node_id_t>((*iter)[1]);
+        auto distance = static_cast<distance_t>((*iter)[2]);
+
+        m_stops[stop_id].out_hubs.emplace(node_id, distance_to_time(distance));
     }
 }
 
@@ -79,7 +89,7 @@ void Timetable::parse_stop_times() {
         auto trip_id = static_cast<trip_id_t>((*iter)[0]);
         auto arr = static_cast<_time_t>((*iter)[1]);
         auto dep = static_cast<_time_t>((*iter)[2]);
-        auto stop_id = static_cast<stop_id_t>((*iter)[3]);
+        auto stop_id = static_cast<node_id_t>((*iter)[3]);
 
         trip_pos_t trip_pos = m_trip_positions.at(trip_id);
         route_id_t route_id = trip_pos.first;
@@ -121,18 +131,28 @@ void Timetable::summary() {
 
     // Count the number of stops with at least one route using it
     int count_stops = 0;
-    int count_transfers = 0;
+    int count_hubs = 0;
     for (const auto& stop: m_stops) {
         if (stop.is_valid()) {
             count_stops += 1;
         }
 
-        count_transfers += stop.transfers.size();
+        count_hubs += stop.in_hubs.size();
+        count_hubs += stop.out_hubs.size();
     }
     std::cout << count_stops << " stops" << std::endl;
-    std::cout << count_transfers << " transfers" << std::endl;
+
+    std::cout.setf(std::ios::fixed, std::ios::floatfield);
+    std::cout.precision(3);
+    std::cout << count_hubs / static_cast<double>(count_stops) << " hubs in average" << std::endl;
 
     std::cout << count_stop_times << " events" << std::endl;
 
     std::cout << std::string(80, '-') << std::endl;
+}
+
+_time_t distance_to_time(const distance_t& d) {
+    static const double v {4.5};  // km/h
+
+    return {static_cast<_time_t::value_type>(std::lround(25 * d / 9 / v))};
 }
