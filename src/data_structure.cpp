@@ -19,7 +19,7 @@ void Timetable::parse_data() {
 }
 
 void Timetable::parse_trips() {
-    auto trips_file = read_dataset_file<igzstream>("trips.gz");
+    auto trips_file = read_dataset_file<igzstream>(m_path + "trips.gz");
 
     for (CSVIterator<uint32_t> iter {trips_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto route_id = static_cast<route_id_t>((*iter)[0]);
@@ -41,7 +41,7 @@ void Timetable::parse_trips() {
 }
 
 void Timetable::parse_stop_routes() {
-    auto stop_routes_file = read_dataset_file<igzstream>("stop_routes.gz");
+    auto stop_routes_file = read_dataset_file<igzstream>(m_path + "stop_routes.gz");
 
     for (CSVIterator<uint32_t> iter {stop_routes_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto stop_id = static_cast<stop_id_t>((*iter)[0]);
@@ -59,7 +59,7 @@ void Timetable::parse_stop_routes() {
 }
 
 void Timetable::parse_transfers() {
-    auto transfers_file = read_dataset_file<igzstream>("transfers_transitive.gz");
+    auto transfers_file = read_dataset_file<igzstream>(m_path + "transfers_transitive.gz");
 
     for (CSVIterator<uint32_t> iter {transfers_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto from = static_cast<stop_id_t>((*iter)[0]);
@@ -73,7 +73,7 @@ void Timetable::parse_transfers() {
 }
 
 void Timetable::parse_stop_times() {
-    auto stop_times_file = read_dataset_file<igzstream>("stop_times.gz");
+    auto stop_times_file = read_dataset_file<igzstream>(m_path + "stop_times.gz");
 
     for (CSVIterator<uint32_t> iter {stop_times_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto trip_id = static_cast<trip_id_t>((*iter)[0]);

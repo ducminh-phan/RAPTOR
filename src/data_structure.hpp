@@ -89,17 +89,6 @@ private:
     std::vector<Stop> m_stops;
     std::unordered_map<trip_id_t, trip_pos_t> m_trip_positions;
 
-    template<class T>
-    std::unique_ptr<T> read_dataset_file(const std::string& file_name) {
-        // Since the copy constructor of std::istream is deleted,
-        // we need to return a new object by pointer
-        std::unique_ptr<T> file_ptr {new T {(m_path + file_name).c_str()}};
-
-        check_file_exists(*file_ptr, file_name);
-
-        return file_ptr;
-    }
-
     void parse_data();
 
     void parse_trips();
