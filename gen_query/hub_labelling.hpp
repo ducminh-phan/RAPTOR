@@ -20,10 +20,12 @@ struct NodeLabel {
 };
 
 class GraphLabel {
+public:
+    using label_t = std::unordered_map<Node, NodeLabel>;
 private:
     std::string m_path;
-    std::unordered_map<Node, NodeLabel> m_in_labels;
-    std::unordered_map<Node, NodeLabel> m_out_labels;
+    label_t m_in_labels;
+    label_t m_out_labels;
 
     void parse_hub_files();
 
@@ -39,6 +41,10 @@ public:
     const Distance shortest_path_length(const Node& u, const Node& v) const;
 
     const std::vector<std::pair<Distance, Node>> single_source_shortest_path_length(const Node& source) const;
+
+    const label_t& in_labels() const { return m_in_labels; }
+
+    const std::string& path() const { return m_path; }
 };
 
 #endif // HUB_LABELLING_HPP

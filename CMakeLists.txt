@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "-Wall")
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-
 include_directories(include)
 add_executable(raptor
         src/main.cpp
@@ -14,5 +13,6 @@ add_executable(raptor
 add_executable(gen_query
         gen_query/main.cpp
         gen_query/hub_labelling.cpp gen_query/hub_labelling.hpp)
+
 target_link_libraries(raptor z)
 target_link_libraries(gen_query z)
