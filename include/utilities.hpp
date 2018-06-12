@@ -9,7 +9,9 @@
 
 
 namespace {
-    inline void check_file_exists(std::istream& file, const std::string& file_path) {
+    inline void file_exists(const std::string& file_path) {
+        std::ifstream file {file_path};
+
         if (!file) {
             std::cerr << "Error occurred while reading " << file_path << std::endl;
             std::cerr << "Exiting..." << std::endl;
@@ -23,7 +25,7 @@ namespace {
         // we need to return a new object by pointer
         std::unique_ptr<T> file_ptr {new T {file_path.c_str()}};
 
-        check_file_exists(*file_ptr, file_path);
+        file_exists(file_path);
 
         return file_ptr;
     }
