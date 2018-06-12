@@ -2,6 +2,7 @@
 #define HUB_LABELLING_HPP
 
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -9,12 +10,13 @@
 
 using Node = uint32_t;
 using Distance = uint32_t;
+extern const Distance infty;
 
 struct NodeLabel {
     std::vector<Node> hubs;
     std::vector<Distance> distances;
 
-    size_t size() { return hubs.size(); }
+    const size_t size() const { return hubs.size(); }
 };
 
 class GraphLabel {
@@ -33,6 +35,10 @@ public:
     explicit GraphLabel(const std::string& name) : m_path {"../Public-Transit-Data/" + name + "/"} {
         parse_hub_files();
     };
+
+    const Distance shortest_path_length(const Node& u, const Node& v) const;
+
+    const std::vector<std::pair<Distance, Node>> single_source_shortest_path_length(const Node& source) const;
 };
 
 #endif // HUB_LABELLING_HPP
