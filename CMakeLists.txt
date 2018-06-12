@@ -11,4 +11,8 @@ add_executable(raptor
         src/main.cpp
         src/data_structure.cpp src/data_structure.hpp
         src/raptor.cpp src/raptor.hpp)
+add_executable(gen_query
+        gen_query/main.cpp
+        gen_query/hub_labelling.cpp gen_query/hub_labelling.hpp)
 target_link_libraries(raptor z)
+target_link_libraries(gen_query z)
