@@ -21,7 +21,7 @@ void Timetable::parse_data() {
 }
 
 void Timetable::parse_trips() {
-    auto trips_file = read_dataset_file<igzstream>("trips.gz");
+    auto trips_file = read_dataset_file<igzstream>(m_path + "trips.csv.gz");
 
     for (CSVIterator<uint32_t> iter {trips_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto route_id = static_cast<route_id_t>((*iter)[0]);
@@ -43,7 +43,7 @@ void Timetable::parse_trips() {
 }
 
 void Timetable::parse_stop_routes() {
-    auto stop_routes_file = read_dataset_file<igzstream>("stop_routes.gz");
+    auto stop_routes_file = read_dataset_file<igzstream>(m_path + "stop_routes.csv.gz");
 
     for (CSVIterator<uint32_t> iter {stop_routes_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto stop_id = static_cast<node_id_t>((*iter)[0]);
@@ -61,7 +61,7 @@ void Timetable::parse_stop_routes() {
 }
 
 void Timetable::parse_hubs() {
-    auto in_hub_file = read_dataset_file<igzstream>("in_hub.gr.gz");
+    auto in_hub_file = read_dataset_file<igzstream>(m_path + "in_hub.gr.gz");
 
     for (CSVIterator<uint32_t> iter {in_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto node_id = static_cast<node_id_t>((*iter)[0]);
@@ -71,7 +71,7 @@ void Timetable::parse_hubs() {
         m_stops[stop_id].in_hubs.emplace(node_id, distance_to_time(distance));
     }
 
-    auto out_hub_file = read_dataset_file<igzstream>("out_hub.gr.gz");
+    auto out_hub_file = read_dataset_file<igzstream>(m_path + "out_hub.gr.gz");
 
     for (CSVIterator<uint32_t> iter {out_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto stop_id = static_cast<node_id_t>((*iter)[0]);
@@ -83,7 +83,7 @@ void Timetable::parse_hubs() {
 }
 
 void Timetable::parse_stop_times() {
-    auto stop_times_file = read_dataset_file<igzstream>("stop_times.gz");
+    auto stop_times_file = read_dataset_file<igzstream>(m_path + "stop_times.csv.gz");
 
     for (CSVIterator<uint32_t> iter {stop_times_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto trip_id = static_cast<trip_id_t>((*iter)[0]);

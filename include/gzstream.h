@@ -34,6 +34,7 @@
 #include <fstream>
 #include <zlib.h>
 #include <string>
+#include <cstring>
 
 #ifdef GZSTREAM_NAMESPACE
 namespace GZSTREAM_NAMESPACE {

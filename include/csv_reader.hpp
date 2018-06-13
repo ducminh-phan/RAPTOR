@@ -7,6 +7,8 @@
 #include <vector>
 #include <string>
 
+#include "utilities.hpp"
+
 template<class T>
 class CSVRow {
 private:
