@@ -7,7 +7,7 @@
 extern const Distance infty = std::numeric_limits<Distance>::max();
 
 void GraphLabel::parse_hub_files() {
-    auto in_hub_file = read_dataset_file<igzstream>(m_path + "in_hub.gr.gz");
+    auto in_hub_file = read_dataset_file<igzstream>(m_path + "in_hubs.gr.gz");
 
     for (CSVIterator<uint32_t> iter {in_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
         Node hub = (*iter)[0];
@@ -18,7 +18,7 @@ void GraphLabel::parse_hub_files() {
         m_in_labels[node_id].distances.emplace_back(dist);
     }
 
-    auto out_hub_file = read_dataset_file<igzstream>(m_path + "out_hub.gr.gz");
+    auto out_hub_file = read_dataset_file<igzstream>(m_path + "out_hubs.gr.gz");
 
     for (CSVIterator<uint32_t> iter {out_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
         Node node_id = (*iter)[0];
