@@ -102,6 +102,8 @@ private:
 public:
     const std::string& name() const { return m_name; }
 
+    const std::string& path() const { return m_path; }
+
     const std::vector<Route>& routes() const { return m_routes; }
 
     const Route& routes(route_id_t route_id) const { return m_routes[route_id]; }
@@ -117,7 +119,7 @@ public:
         parse_data();
     }
 
-    void summary();
+    void summary() const;
 };
 
 #endif // DATA_STRUCTURE_HPP

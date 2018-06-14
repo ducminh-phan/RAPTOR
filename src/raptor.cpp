@@ -124,7 +124,7 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_i
     return earliest_trip;
 }
 
-std::vector<_time_t> Raptor::raptor() {
+std::vector<_time_t> Raptor::run() {
     // Initialisation
     for (const auto& stop: m_timetable->stops()) {
         m_earliest_arrival_time[stop.id] = _time_t();
@@ -201,6 +201,6 @@ std::vector<_time_t> Raptor::raptor() {
         if (m_marked_stops.empty()) break;
     }
 
-    Profiler::report();
+    Profiler::clear();
     return m_labels[m_target_id];
 }

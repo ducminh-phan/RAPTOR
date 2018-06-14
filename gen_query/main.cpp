@@ -45,7 +45,7 @@ queries_t gen_query(const GraphLabel& gr_label) {
         auto current_rank = static_cast<size_t>(std::floor(std::log2(shortest_path_lengths.size())));
         max_rank = std::max(max_rank, current_rank);
 
-        for (size_t rank = min_rank; rank < current_rank; ++rank) {
+        for (size_t rank = min_rank; rank <= current_rank; ++rank) {
             // Choose a random node so that its index is between 2^r and 2^(r+1)
             auto target = rand_element(shortest_path_lengths, 1u << rank, 2u << rank).second;
 
