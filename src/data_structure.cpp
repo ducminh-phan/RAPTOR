@@ -152,7 +152,7 @@ void Timetable::summary() const {
 }
 
 _time_t distance_to_time(const distance_t& d) {
-    static const double v {4.5};  // km/h
+    static const double v {4.0};  // km/h
 
-    return {static_cast<_time_t::value_type>(std::lround(25 * d / 9 / v))};
+    return {static_cast<_time_t::value_type>(std::lround(9 * d / 25 / v))};
 }
