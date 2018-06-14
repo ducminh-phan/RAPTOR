@@ -20,7 +20,6 @@ private:
     std::set<node_id_t> m_marked_stops;
     std::unordered_map<node_id_t, _time_t> m_earliest_arrival_time;
     std::unordered_map<node_id_t, std::vector<_time_t>> m_labels;
-    std::unordered_map<node_id_t, _time_t> m_hub_labels;
 
     bool validate_input();
 

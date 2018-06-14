@@ -61,7 +61,7 @@ void Timetable::parse_stop_routes() {
 }
 
 void Timetable::parse_hubs() {
-    auto in_hub_file = read_dataset_file<igzstream>(m_path + "in_hub.gr.gz");
+    auto in_hub_file = read_dataset_file<igzstream>(m_path + "in_hubs.gr.gz");
 
     for (CSVIterator<uint32_t> iter {in_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto node_id = static_cast<node_id_t>((*iter)[0]);
@@ -71,7 +71,7 @@ void Timetable::parse_hubs() {
         m_stops[stop_id].in_hubs.emplace(node_id, distance_to_time(distance));
     }
 
-    auto out_hub_file = read_dataset_file<igzstream>(m_path + "out_hub.gr.gz");
+    auto out_hub_file = read_dataset_file<igzstream>(m_path + "out_hubs.gr.gz");
 
     for (CSVIterator<uint32_t> iter {out_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto stop_id = static_cast<node_id_t>((*iter)[0]);

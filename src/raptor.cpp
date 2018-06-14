@@ -132,6 +132,24 @@ std::vector<_time_t> Raptor::run() {
     }
     m_labels[m_source_id] = {m_dep};
     m_marked_stops.insert(m_source_id);
+    std::unordered_map<node_id_t, _time_t> tmp_hub_labels;
+
+    // Find the time to get to the target using only the walking graph
+    for (const auto& kv: m_timetable->stops(m_source_id).out_hubs) {
+        auto hub_id = kv.first;
+        auto walking_time = kv.second;
+
+        tmp_hub_labels[hub_id] = std::min(tmp_hub_labels[hub_id], m_dep + walking_time);
+    }
+    for (const auto& kv: m_timetable->stops(m_target_id).in_hubs) {
+        auto hub_id = kv.first;
+        auto walking_time = kv.second;
+
+        m_labels[m_target_id].back() = std::min(
+                m_labels[m_target_id].back(),
+                tmp_hub_labels[hub_id] + walking_time
+        );
+    }
 
     uint16_t round {1};
     while (true) {
@@ -188,8 +206,8 @@ std::vector<_time_t> Raptor::run() {
                 auto hub_id = kv.first;
                 auto walking_time = kv.second;
 
-                m_hub_labels[hub_id] = std::min(
-                        m_hub_labels[hub_id],
+                tmp_hub_labels[hub_id] = std::min(
+                        tmp_hub_labels[hub_id],
                         m_labels[stop_id].back() + walking_time
                 );
             }
@@ -202,7 +220,7 @@ std::vector<_time_t> Raptor::run() {
 
                 m_labels[stop.id].back() = std::min(
                         m_labels[stop.id].back(),
-                        m_hub_labels[hub_id] + walking_time
+                        tmp_hub_labels[hub_id] + walking_time
                 );
             }
 
