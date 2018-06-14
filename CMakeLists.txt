@@ -10,7 +10,8 @@ include_directories(include)
 add_executable(raptor
         src/main.cpp
         src/data_structure.cpp src/data_structure.hpp
-        src/raptor.cpp src/raptor.hpp)
+        src/raptor.cpp src/raptor.hpp
+        src/experiments.cpp src/experiments.hpp)
 add_executable(gen_query
         gen_query/main.cpp
         gen_query/hub_labelling.cpp gen_query/hub_labelling.hpp)

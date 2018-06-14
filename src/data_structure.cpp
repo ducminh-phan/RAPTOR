@@ -110,7 +110,7 @@ void Timetable::parse_stop_times() {
     }
 }
 
-void Timetable::summary() {
+void Timetable::summary() const {
     std::cout << std::string(80, '-') << std::endl;
 
     std::cout << "Summary of the dataset:" << std::endl;

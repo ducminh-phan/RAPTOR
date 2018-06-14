@@ -31,10 +31,11 @@ private:
     trip_id_t earliest_trip(const uint16_t& round, const route_id_t& route_id, const node_id_t& stop_id);
 
 public:
-    Raptor(Timetable* timetable_p, node_id_t source_id, node_id_t target_id, _time_t departure_time) :
+    Raptor(const Timetable* timetable_p, const node_id_t& source_id, const node_id_t& target_id,
+           const _time_t& departure_time) :
             m_timetable {timetable_p}, m_source_id {source_id}, m_target_id {target_id}, m_dep {departure_time} {}
 
-    std::vector<_time_t> raptor();
+    std::vector<_time_t> run();
 };
 
 using cache_key_t = std::tuple<_time_t::value_type, route_id_t, node_id_t>;
