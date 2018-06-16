@@ -87,8 +87,8 @@ void Timetable::parse_stop_times() {
 
     for (CSVIterator<uint32_t> iter {stop_times_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto trip_id = static_cast<trip_id_t>((*iter)[0]);
-        auto arr = static_cast<_time_t>((*iter)[1]);
-        auto dep = static_cast<_time_t>((*iter)[2]);
+        auto arr = static_cast<Time::value_type>((*iter)[1]);
+        auto dep = static_cast<Time::value_type>((*iter)[2]);
         auto stop_id = static_cast<node_id_t>((*iter)[3]);
 
         trip_pos_t trip_pos = m_trip_positions.at(trip_id);
@@ -151,8 +151,8 @@ void Timetable::summary() const {
     std::cout << std::string(80, '-') << std::endl;
 }
 
-_time_t distance_to_time(const distance_t& d) {
+Time distance_to_time(const distance_t& d) {
     static const double v {4.0};  // km/h
 
-    return {static_cast<_time_t::value_type>(std::lround(9 * d / 25 / v))};
+    return Time {static_cast<Time::value_type>(std::lround(9 * d / 25 / v))};
 }

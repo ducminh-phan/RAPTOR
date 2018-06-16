@@ -3,32 +3,6 @@
 
 #include "raptor.hpp"
 
-bool Raptor::validate_input() {
-    size_t max_stop_id = m_timetable->stops().size();
-
-    if ((m_source_id >= max_stop_id) || !m_timetable->stops(m_source_id).is_valid()) {
-        std::cerr << "The source stop id of " << m_source_id << " is not a valid stop." << std::endl;
-        return false;
-    }
-
-    if ((m_target_id >= max_stop_id) || !m_timetable->stops(m_target_id).is_valid()) {
-        std::cerr << "The target stop id of " << m_target_id << " is not a valid stop." << std::endl;
-        return false;
-    }
-
-    if (m_source_id == m_target_id) {
-        std::cerr << "The source and the target need to be distinct." << std::endl;
-        return false;
-    }
-
-    if (m_dep > 86400) {
-        std::cerr << "The departure time of " << m_dep << " is invalid." << std::endl;
-        return false;
-    }
-
-    return true;
-}
-
 // Check if stop1 comes before stop2 in the route
 bool Raptor::check_stops_order(const route_id_t& route_id, const node_id_t& stop1, const node_id_t& stop2) {
     Profiler prof {__func__};
@@ -75,7 +49,7 @@ route_stop_queue_t Raptor::make_queue() {
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s)
 trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_id, const node_id_t& stop_id) {
     static std::unordered_map<cache_key_t, trip_id_t, cache_key_hash> cache;
-    _time_t t = m_labels[stop_id][round - 1];
+    Time t = m_labels[stop_id][round - 1];
 
     auto* prof_c = new Profiler {"cached"};
 
@@ -100,7 +74,7 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_i
     auto last = stop_times.end();
     std::vector<size_t> stop_idx = route.stop_positions.at(stop_id);
     trip_id_t earliest_trip = null_trip;
-    _time_t earliest_time;
+    Time earliest_time;
 
     // Iterate over the trips
     while (iter != last) {
@@ -109,7 +83,7 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_i
         // Iterate over the appearances of the stop in the trip
         for (const auto& idx: stop_idx) {
             // The departure time of the current trip at stop_id
-            const _time_t& dep = (*iter).at(idx).dep;
+            const Time& dep = (*iter).at(idx).dep;
 
             if (dep >= t && dep < earliest_time) {
                 earliest_trip = r;
@@ -124,15 +98,15 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_i
     return earliest_trip;
 }
 
-std::vector<_time_t> Raptor::run() {
+std::vector<Time> Raptor::run() {
     // Initialisation
     for (const auto& stop: m_timetable->stops()) {
-        m_earliest_arrival_time[stop.id] = _time_t();
+        m_earliest_arrival_time[stop.id] = {};
         m_labels[stop.id].emplace_back();
     }
     m_labels[m_source_id] = {m_dep};
     m_marked_stops.insert(m_source_id);
-    std::unordered_map<node_id_t, _time_t> tmp_hub_labels;
+    std::unordered_map<node_id_t, Time> tmp_hub_labels;
 
     // Find the time to get to the target using only the walking graph
     for (const auto& kv: m_timetable->stops(m_source_id).out_hubs) {
@@ -174,7 +148,7 @@ std::vector<_time_t> Raptor::run() {
             // Iterate over the stops of the route beginning with stop_id
             for (size_t i = stop_idx; i < route.stops.size(); ++i) {
                 node_id_t p_i = route.stops[i];
-                _time_t dep, arr;
+                Time dep, arr;
 
                 if (t != null_trip) {
                     // Get the position of the trip t

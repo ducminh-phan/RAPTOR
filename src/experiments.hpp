@@ -10,9 +10,9 @@ struct Query {
     uint16_t rank;
     node_id_t source_id;
     node_id_t target_id;
-    _time_t dep;
+    Time dep;
 
-    Query(uint16_t r, node_id_t s, node_id_t t, _time_t::value_type d) :
+    Query(uint16_t r, node_id_t s, node_id_t t, Time::value_type d) :
             rank {r}, source_id {s}, target_id {t}, dep {d} {};
 };
 
