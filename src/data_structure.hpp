@@ -18,7 +18,7 @@ using route_id_t = uint16_t;
 using trip_pos_t = std::pair<route_id_t, size_t>;
 extern const trip_id_t null_trip;
 
-class _time_t {
+class Time {
 public:
     using value_type = uint32_t;
 private:
@@ -26,25 +26,23 @@ private:
 public:
     const static value_type inf = std::numeric_limits<value_type>::max();
 
-    _time_t() : m_val {inf} {};
+    Time() : m_val {inf} {};
 
-    _time_t(value_type val_) : m_val {val_} {}
+    explicit Time(value_type val_) : m_val {val_} {}
 
     const value_type& val() { return m_val; }
 
-    friend _time_t operator+(const _time_t& t1, const _time_t t2) { return {t1.m_val + t2.m_val}; }
+    friend Time operator+(const Time& t1, const Time& t2) { return Time {t1.m_val + t2.m_val}; }
 
-    friend bool operator<(const _time_t& t1, const _time_t& t2) { return t1.m_val < t2.m_val; }
+    friend bool operator<(const Time& t1, const Time& t2) { return t1.m_val < t2.m_val; }
 
-    friend bool operator>(const _time_t& t1, const _time_t& t2) { return t1.m_val > t2.m_val; }
+    friend bool operator>(const Time& t1, const Time& t2) { return t1.m_val > t2.m_val; }
 
-    friend bool operator>(const _time_t& t1, const value_type& t2) { return t1.m_val > t2; }
+    friend bool operator>=(const Time& t1, const Time& t2) { return !(t1 < t2); }
 
-    friend bool operator>=(const _time_t& t1, const _time_t& t2) { return !(t1 < t2); }
+    friend bool operator<=(const Time& t1, const Time& t2) { return !(t1 > t2); }
 
-    friend bool operator<=(const _time_t& t1, const _time_t& t2) { return !(t1 > t2); }
-
-    friend std::ostream& operator<<(std::ostream& out, const _time_t& t) {
+    friend std::ostream& operator<<(std::ostream& out, const Time& t) {
         out << t.m_val;
         return out;
     }
@@ -52,9 +50,9 @@ public:
 
 struct Transfer {
     stop_id_t dest;
-    _time_t time;
+    Time time;
 
-    Transfer(stop_id_t dest, _time_t time) : dest {dest}, time {time} {};
+    Transfer(stop_id_t dest, Time::value_type time) : dest {dest}, time {time} {};
 };
 
 struct Stop {
@@ -67,10 +65,10 @@ struct Stop {
 
 struct StopTime {
     stop_id_t stop_id;
-    _time_t arr;
-    _time_t dep;
+    Time arr;
+    Time dep;
 
-    StopTime(stop_id_t s, _time_t a, _time_t d) : stop_id {s}, arr {a}, dep {d} {};
+    StopTime(stop_id_t s, Time::value_type a, Time::value_type d) : stop_id {s}, arr {a}, dep {d} {};
 };
 
 struct Route {

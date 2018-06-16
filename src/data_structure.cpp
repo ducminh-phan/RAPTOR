@@ -64,7 +64,7 @@ void Timetable::parse_transfers() {
     for (CSVIterator<uint32_t> iter {transfers_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto from = static_cast<stop_id_t>((*iter)[0]);
         auto to = static_cast<stop_id_t>((*iter)[1]);
-        auto time = static_cast<_time_t>((*iter)[2]);
+        auto time = static_cast<Time::value_type>((*iter)[2]);
 
         if (m_stops[from].is_valid() && m_stops[to].is_valid()) {
             m_stops[from].transfers.emplace_back(to, time);
@@ -77,8 +77,8 @@ void Timetable::parse_stop_times() {
 
     for (CSVIterator<uint32_t> iter {stop_times_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto trip_id = static_cast<trip_id_t>((*iter)[0]);
-        auto arr = static_cast<_time_t>((*iter)[1]);
-        auto dep = static_cast<_time_t>((*iter)[2]);
+        auto arr = static_cast<Time::value_type>((*iter)[1]);
+        auto dep = static_cast<Time::value_type>((*iter)[2]);
         auto stop_id = static_cast<stop_id_t>((*iter)[3]);
 
         trip_pos_t trip_pos = m_trip_positions.at(trip_id);
