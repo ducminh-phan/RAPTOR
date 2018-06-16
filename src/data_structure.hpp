@@ -44,6 +44,8 @@ public:
 
     friend bool operator<=(const Time& t1, const Time& t2) { return !(t1 > t2); }
 
+    explicit operator bool() { return m_val < inf; }
+
     friend std::ostream& operator<<(std::ostream& out, const Time& t) {
         out << t.m_val;
         return out;

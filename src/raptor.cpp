@@ -119,11 +119,14 @@ std::vector<Time> Raptor::run() {
         auto hub_id = kv.first;
         auto walking_time = kv.second;
 
-        m_labels[m_target_id].back() = std::min(
-                m_labels[m_target_id].back(),
-                tmp_hub_labels[hub_id] + walking_time
-        );
+        if (tmp_hub_labels[hub_id]) {
+            m_labels[m_target_id].back() = std::min(
+                    m_labels[m_target_id].back(),
+                    tmp_hub_labels[hub_id] + walking_time
+            );
+        }
     }
+    tmp_hub_labels.clear();
 
     uint16_t round {1};
     while (true) {
@@ -174,6 +177,8 @@ std::vector<Time> Raptor::run() {
             }
         }
 
+        if (m_marked_stops.empty()) break;
+
         // Third stage, look at footpaths
         for (const auto& stop_id: m_marked_stops) {
             for (const auto& kv: m_timetable->stops(stop_id).out_hubs) {
@@ -192,17 +197,21 @@ std::vector<Time> Raptor::run() {
                 auto hub_id = kv.first;
                 auto walking_time = kv.second;
 
-                m_labels[stop.id].back() = std::min(
-                        m_labels[stop.id].back(),
-                        tmp_hub_labels[hub_id] + walking_time
-                );
+                if (tmp_hub_labels[hub_id]) {
+                    m_labels[stop.id].back() = std::min(
+                            m_labels[stop.id].back(),
+                            tmp_hub_labels[hub_id] + walking_time
+                    );
+                }
             }
 
-            m_marked_stops.insert(stop.id);
+            if (m_labels[stop.id].back() < m_earliest_arrival_time[stop.id]) {
+                m_marked_stops.insert(stop.id);
+                m_earliest_arrival_time[stop.id] = m_labels[stop.id].back();
+            }
         }
 
         ++round;
-        if (m_marked_stops.empty()) break;
     }
 
     Profiler::clear();
