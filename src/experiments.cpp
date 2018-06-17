@@ -6,12 +6,27 @@
 
 
 void write_results(const Results& results, const std::string& name) {
-    std::ofstream results_file {"../" + name + ".csv"};
+    std::ofstream running_time_file {"../" + name + "_running_time.csv"};
+    std::ofstream arrival_times_file {"../" + name + "_arrival_times.csv"};
 
-    results_file << "rank,running_time\n";
+    running_time_file << "running_time\n";
+    arrival_times_file << "arrival_times\n";
 
     for (const auto& result: results) {
-        results_file << result.rank << ',' << result.running_time << '\n';
+        running_time_file << result.running_time << '\n';
+
+        bool first = true;
+        for (const auto& elem: result.arrival_times) {
+            if (first) {
+                first = false;
+            } else {
+                arrival_times_file << ',';
+            }
+
+            arrival_times_file << elem;
+        }
+
+        arrival_times_file << '\n';
     }
 }
 
@@ -41,11 +56,11 @@ void Experiment::run() const {
 
         Timer timer;
 
-        raptor.run();
+        auto arrival_times = raptor.run();
 
         double running_time = timer.elapsed();
 
-        res.emplace_back(query.rank, running_time);
+        res.emplace_back(query.rank, running_time, arrival_times);
     }
 
     write_results(res, m_timetable->name());

@@ -1,6 +1,7 @@
 #ifndef EXPERIMENTS_HPP
 #define EXPERIMENTS_HPP
 
+#include <utility> // std::move
 #include <vector>
 
 #include "data_structure.hpp"
@@ -23,8 +24,9 @@ using Queries = std::vector<Query>;
 struct Result {
     uint16_t rank;
     double running_time;
+    std::vector<Time> arrival_times;
 
-    Result(uint16_t r, double rt) : rank {r}, running_time {rt} {};
+    Result(uint16_t r, double rt, std::vector<Time> a) : rank {r}, running_time {rt}, arrival_times {std::move(a)} {};
 };
 
 
