@@ -4,7 +4,7 @@
 #include "raptor.hpp"
 
 // Check if stop1 comes before stop2 in the route
-bool Raptor::check_stops_order(const route_id_t& route_id, const stop_id_t& stop1, const stop_id_t& stop2) {
+bool Raptor::check_stops_order(const route_id_t& route_id, const node_id_t& stop1, const node_id_t& stop2) {
     Profiler prof {__func__};
 
     const auto& route = m_timetable->routes(route_id);
@@ -47,7 +47,7 @@ route_stop_queue_t Raptor::make_queue() {
 
 // Find the earliest trip in route r that one can catch at stop s in round k,
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s)
-trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_id, const stop_id_t& stop_id) {
+trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_id, const node_id_t& stop_id) {
     static std::unordered_map<cache_key_t, trip_id_t, cache_key_hash> cache;
     Time t = m_labels[stop_id][round - 1];
 
@@ -106,6 +106,27 @@ std::vector<Time> Raptor::run() {
     }
     m_labels[m_source_id] = {m_dep};
     m_marked_stops.insert(m_source_id);
+    std::unordered_map<node_id_t, Time> tmp_hub_labels;
+
+    // Find the time to get to the target using only the walking graph
+    for (const auto& kv: m_timetable->stops(m_source_id).out_hubs) {
+        auto hub_id = kv.first;
+        auto walking_time = kv.second;
+
+        tmp_hub_labels[hub_id] = std::min(tmp_hub_labels[hub_id], m_dep + walking_time);
+    }
+    for (const auto& kv: m_timetable->stops(m_target_id).in_hubs) {
+        auto hub_id = kv.first;
+        auto walking_time = kv.second;
+
+        if (tmp_hub_labels[hub_id]) {
+            m_labels[m_target_id].back() = std::min(
+                    m_labels[m_target_id].back(),
+                    tmp_hub_labels[hub_id] + walking_time
+            );
+        }
+    }
+    tmp_hub_labels.clear();
 
     uint16_t round {1};
     while (true) {
@@ -129,7 +150,7 @@ std::vector<Time> Raptor::run() {
 
             // Iterate over the stops of the route beginning with stop_id
             for (size_t i = stop_idx; i < route.stops.size(); ++i) {
-                stop_id_t p_i = route.stops[i];
+                node_id_t p_i = route.stops[i];
                 Time dep, arr;
 
                 if (t != null_trip) {
@@ -156,23 +177,41 @@ std::vector<Time> Raptor::run() {
             }
         }
 
+        if (m_marked_stops.empty()) break;
+
         // Third stage, look at footpaths
         for (const auto& stop_id: m_marked_stops) {
-            for (const auto& transfer: m_timetable->stops(stop_id).transfers) {
-                auto dest_id = transfer.dest;
-                auto transfer_time = transfer.time;
+            for (const auto& kv: m_timetable->stops(stop_id).out_hubs) {
+                auto hub_id = kv.first;
+                auto walking_time = kv.second;
 
-                m_labels[dest_id].back() = std::min(
-                        m_labels[dest_id].back(),
-                        m_labels[stop_id].back() + transfer_time
+                tmp_hub_labels[hub_id] = std::min(
+                        tmp_hub_labels[hub_id],
+                        m_labels[stop_id].back() + walking_time
                 );
+            }
+        }
 
-                m_marked_stops.insert(dest_id);
+        for (const auto& stop: m_timetable->stops()) {
+            for (const auto& kv: stop.in_hubs) {
+                auto hub_id = kv.first;
+                auto walking_time = kv.second;
+
+                if (tmp_hub_labels[hub_id]) {
+                    m_labels[stop.id].back() = std::min(
+                            m_labels[stop.id].back(),
+                            tmp_hub_labels[hub_id] + walking_time
+                    );
+                }
+            }
+
+            if (m_labels[stop.id].back() < m_earliest_arrival_time[stop.id]) {
+                m_marked_stops.insert(stop.id);
+                m_earliest_arrival_time[stop.id] = m_labels[stop.id].back();
             }
         }
 
         ++round;
-        if (m_marked_stops.empty()) break;
     }
 
     Profiler::clear();

@@ -37,8 +37,8 @@ Queries Experiment::read_queries() {
 
     for (CSVIterator<uint32_t> iter {queries_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto r = static_cast<uint16_t>((*iter)[0]);
-        auto s = static_cast<stop_id_t>((*iter)[1]);
-        auto t = static_cast<stop_id_t>((*iter)[2]);
+        auto s = static_cast<node_id_t>((*iter)[1]);
+        auto t = static_cast<node_id_t>((*iter)[2]);
         auto d = static_cast<Time::value_type>((*iter)[3]);
 
         queries.emplace_back(r, s, t, d);
