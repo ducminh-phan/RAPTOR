@@ -33,7 +33,7 @@ struct Result {
 using Results = std::vector<Result>;
 
 
-void write_results(const Results& results, const std::string& name);
+void write_results(const Results& results, const std::string& name, const std::string& algo);
 
 
 class Experiment {
@@ -47,7 +47,7 @@ public:
     explicit Experiment(const Timetable* timetable) :
             m_timetable {timetable}, m_queries {read_queries()} {}
 
-    void run() const;
+    void run(const std::string& algo) const;
 };
 
 #endif // EXPERIMENTS_HPP

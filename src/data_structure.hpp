@@ -52,9 +52,17 @@ public:
     }
 };
 
+struct Transfer {
+    node_id_t dest;
+    Time time;
+
+    Transfer(node_id_t dest, Time::value_type time) : dest {dest}, time {time} {};
+};
+
 struct Stop {
     node_id_t id;
     std::vector<route_id_t> routes;
+    std::vector<Transfer> transfers;
     std::unordered_map<node_id_t, Time> in_hubs;
     std::unordered_map<node_id_t, Time> out_hubs;
 
@@ -80,6 +88,7 @@ struct Route {
 class Timetable {
 private:
     std::string m_name;
+    std::string m_algo;
     std::string m_path;
     std::vector<Route> m_routes;
     std::vector<Stop> m_stops;
@@ -90,6 +99,8 @@ private:
     void parse_trips();
 
     void parse_stop_routes();
+
+    void parse_transfers();
 
     void parse_hubs();
 
@@ -110,7 +121,7 @@ public:
 
     const trip_pos_t& trip_positions(trip_id_t trip_id) const { return m_trip_positions.at(trip_id); }
 
-    explicit Timetable(std::string city_name) : m_name {std::move(city_name)} {
+    Timetable(std::string name, std::string algo) : m_name {std::move(name)}, m_algo {std::move(algo)} {
         m_path = "../Public-Transit-Data/" + m_name + "/";
         parse_data();
     }

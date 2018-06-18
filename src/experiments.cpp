@@ -5,9 +5,9 @@
 #include "csv_reader.hpp"
 
 
-void write_results(const Results& results, const std::string& name) {
-    std::ofstream running_time_file {"../" + name + "_running_time.csv"};
-    std::ofstream arrival_times_file {"../" + name + "_arrival_times.csv"};
+void write_results(const Results& results, const std::string& name, const std::string& algo) {
+    std::ofstream running_time_file {"../" + name + "_" + algo + "_running_time.csv"};
+    std::ofstream arrival_times_file {"../" + name + "_" + algo + "_arrival_times.csv"};
 
     running_time_file << "running_time\n";
     arrival_times_file << "arrival_times\n";
@@ -48,20 +48,19 @@ Queries Experiment::read_queries() {
 }
 
 
-void Experiment::run() const {
+void Experiment::run(const std::string& algo) const {
     Results res;
+    Raptor raptor {algo, m_timetable};
 
     for (const auto& query: m_queries) {
-        Raptor raptor {m_timetable, query.source_id, query.target_id, query.dep};
-
         Timer timer;
 
-        auto arrival_times = raptor.run();
+        auto arrival_times = raptor.query(query.source_id, query.target_id, query.dep);
 
         double running_time = timer.elapsed();
 
         res.emplace_back(query.rank, running_time, arrival_times);
     }
 
-    write_results(res, m_timetable->name());
+    write_results(res, m_timetable->name(), algo);
 }

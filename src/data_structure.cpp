@@ -13,7 +13,8 @@ void Timetable::parse_data() {
 
     parse_trips();
     parse_stop_routes();
-    parse_hubs();
+    if (m_algo == "R") parse_transfers();
+    if (m_algo == "HLR") parse_hubs();
     parse_stop_times();
 
     std::cout << "Complete parsing the data." << std::endl;
@@ -57,6 +58,20 @@ void Timetable::parse_stop_routes() {
         }
 
         m_stops[stop_id].routes.push_back(route_id);
+    }
+}
+
+void Timetable::parse_transfers() {
+    auto transfers_file = read_dataset_file<igzstream>(m_path + "transfers.csv.gz");
+
+    for (CSVIterator<uint32_t> iter {transfers_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
+        auto from = static_cast<node_id_t>((*iter)[0]);
+        auto to = static_cast<node_id_t>((*iter)[1]);
+        auto time = static_cast<Time::value_type>((*iter)[2]);
+
+        if (m_stops[from].is_valid() && m_stops[to].is_valid()) {
+            m_stops[from].transfers.emplace_back(to, time);
+        }
     }
 }
 
@@ -132,19 +147,27 @@ void Timetable::summary() const {
     // Count the number of stops with at least one route using it
     int count_stops = 0;
     int count_hubs = 0;
+    int count_transfers = 0;
     for (const auto& stop: m_stops) {
         if (stop.is_valid()) {
             count_stops += 1;
         }
 
+        count_transfers += stop.transfers.size();
         count_hubs += stop.in_hubs.size();
         count_hubs += stop.out_hubs.size();
     }
     std::cout << count_stops << " stops" << std::endl;
 
-    std::cout.setf(std::ios::fixed, std::ios::floatfield);
-    std::cout.precision(3);
-    std::cout << count_hubs / static_cast<double>(count_stops) << " hubs in average" << std::endl;
+    if (m_algo == "R") {
+        std::cout << count_transfers << " transfers" << std::endl;
+    }
+
+    if (m_algo == "HLR") {
+        std::cout.setf(std::ios::fixed, std::ios::floatfield);
+        std::cout.precision(3);
+        std::cout << count_hubs / static_cast<double>(count_stops) << " hubs in average" << std::endl;
+    }
 
     std::cout << count_stop_times << " events" << std::endl;
 

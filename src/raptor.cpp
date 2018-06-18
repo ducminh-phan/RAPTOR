@@ -98,35 +98,37 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const route_id_t& route_i
     return earliest_trip;
 }
 
-std::vector<Time> Raptor::run() {
+std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& target_id, const Time& departure_time) {
     // Initialisation
     for (const auto& stop: m_timetable->stops()) {
         m_earliest_arrival_time[stop.id] = {};
         m_labels[stop.id].emplace_back();
     }
-    m_labels[m_source_id] = {m_dep};
-    m_marked_stops.insert(m_source_id);
+    m_labels[source_id] = {departure_time};
+    m_marked_stops.insert(source_id);
     std::unordered_map<node_id_t, Time> tmp_hub_labels;
 
-    // Find the time to get to the target using only the walking graph
-    for (const auto& kv: m_timetable->stops(m_source_id).out_hubs) {
-        auto hub_id = kv.first;
-        auto walking_time = kv.second;
+    if (m_algo == "HLR") {
+        // Find the time to get to the target using only the walking graph
+        for (const auto& kv: m_timetable->stops(source_id).out_hubs) {
+            auto hub_id = kv.first;
+            auto walking_time = kv.second;
 
-        tmp_hub_labels[hub_id] = std::min(tmp_hub_labels[hub_id], m_dep + walking_time);
-    }
-    for (const auto& kv: m_timetable->stops(m_target_id).in_hubs) {
-        auto hub_id = kv.first;
-        auto walking_time = kv.second;
-
-        if (tmp_hub_labels[hub_id]) {
-            m_labels[m_target_id].back() = std::min(
-                    m_labels[m_target_id].back(),
-                    tmp_hub_labels[hub_id] + walking_time
-            );
+            tmp_hub_labels[hub_id] = std::min(tmp_hub_labels[hub_id], departure_time + walking_time);
         }
+        for (const auto& kv: m_timetable->stops(target_id).in_hubs) {
+            auto hub_id = kv.first;
+            auto walking_time = kv.second;
+
+            if (tmp_hub_labels[hub_id]) {
+                m_labels[target_id].back() = std::min(
+                        m_labels[target_id].back(),
+                        tmp_hub_labels[hub_id] + walking_time
+                );
+            }
+        }
+        tmp_hub_labels.clear();
     }
-    tmp_hub_labels.clear();
 
     uint16_t round {1};
     while (true) {
@@ -163,7 +165,7 @@ std::vector<Time> Raptor::run() {
                     arr = route.stop_times[pos][i].arr;
 
                     // Local and target pruning
-                    if (arr < std::min(m_earliest_arrival_time[p_i], m_earliest_arrival_time[m_target_id])) {
+                    if (arr < std::min(m_earliest_arrival_time[p_i], m_earliest_arrival_time[target_id])) {
                         m_labels[p_i][round] = arr;
                         m_earliest_arrival_time[p_i] = arr;
                         m_marked_stops.insert(p_i);
@@ -177,43 +179,61 @@ std::vector<Time> Raptor::run() {
             }
         }
 
+        ++round;
         if (m_marked_stops.empty()) break;
 
         // Third stage, look at footpaths
-        for (const auto& stop_id: m_marked_stops) {
-            for (const auto& kv: m_timetable->stops(stop_id).out_hubs) {
-                auto hub_id = kv.first;
-                auto walking_time = kv.second;
 
-                tmp_hub_labels[hub_id] = std::min(
-                        tmp_hub_labels[hub_id],
-                        m_labels[stop_id].back() + walking_time
-                );
+        if (m_algo == "R") {
+            for (const auto& stop_id: m_marked_stops) {
+                for (const auto& transfer: m_timetable->stops(stop_id).transfers) {
+                    auto dest_id = transfer.dest;
+                    auto transfer_time = transfer.time;
+
+                    m_labels[dest_id].back() = std::min(
+                            m_labels[dest_id].back(),
+                            m_labels[stop_id].back() + transfer_time
+                    );
+
+                    m_marked_stops.insert(dest_id);
+                }
             }
         }
 
-        for (const auto& stop: m_timetable->stops()) {
-            for (const auto& kv: stop.in_hubs) {
-                auto hub_id = kv.first;
-                auto walking_time = kv.second;
+        if (m_algo == "HLR") {
+            for (const auto& stop_id: m_marked_stops) {
+                for (const auto& kv: m_timetable->stops(stop_id).out_hubs) {
+                    auto hub_id = kv.first;
+                    auto walking_time = kv.second;
 
-                if (tmp_hub_labels[hub_id]) {
-                    m_labels[stop.id].back() = std::min(
-                            m_labels[stop.id].back(),
-                            tmp_hub_labels[hub_id] + walking_time
+                    tmp_hub_labels[hub_id] = std::min(
+                            tmp_hub_labels[hub_id],
+                            m_labels[stop_id].back() + walking_time
                     );
                 }
             }
 
-            if (m_labels[stop.id].back() < m_earliest_arrival_time[stop.id]) {
-                m_marked_stops.insert(stop.id);
-                m_earliest_arrival_time[stop.id] = m_labels[stop.id].back();
+            for (const auto& stop: m_timetable->stops()) {
+                for (const auto& kv: stop.in_hubs) {
+                    auto hub_id = kv.first;
+                    auto walking_time = kv.second;
+
+                    if (tmp_hub_labels[hub_id]) {
+                        m_labels[stop.id].back() = std::min(
+                                m_labels[stop.id].back(),
+                                tmp_hub_labels[hub_id] + walking_time
+                        );
+                    }
+                }
+
+                if (m_labels[stop.id].back() < m_earliest_arrival_time[stop.id]) {
+                    m_marked_stops.insert(stop.id);
+                    m_earliest_arrival_time[stop.id] = m_labels[stop.id].back();
+                }
             }
         }
-
-        ++round;
     }
 
     Profiler::clear();
-    return m_labels[m_target_id];
+    return m_labels[target_id];
 }
