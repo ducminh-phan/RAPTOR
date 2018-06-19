@@ -81,7 +81,7 @@ void Timetable::parse_hubs() {
     for (CSVIterator<uint32_t> iter {in_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto node_id = static_cast<node_id_t>((*iter)[0]);
         auto stop_id = static_cast<node_id_t>((*iter)[1]);
-        auto distance = (*iter)[2];
+        auto distance = static_cast<distance_t>((*iter)[2]);
 
         m_stops[stop_id].in_hubs.emplace(node_id, distance_to_time(distance));
     }
