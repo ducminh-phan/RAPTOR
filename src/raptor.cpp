@@ -208,34 +208,42 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
         }
 
         if (m_algo == "HLR") {
+            std::unordered_set<node_id_t> improved_hubs;
+
             for (const auto& stop_id: marked_stops) {
                 for (const auto& kv: m_timetable->stops(stop_id).out_hubs) {
                     auto hub_id = kv.first;
                     auto walking_time = kv.second;
 
-                    tmp_hub_labels[hub_id] = std::min(
-                            tmp_hub_labels[hub_id],
-                            labels[stop_id].back() + walking_time
-                    );
+                    auto tmp = labels[stop_id].back() + walking_time;
+
+                    if (tmp < tmp_hub_labels[hub_id]) {
+                        tmp_hub_labels[hub_id] = tmp;
+                        improved_hubs.insert(hub_id);
+                    }
                 }
             }
 
-            for (const auto& stop: m_timetable->stops()) {
-                for (const auto& kv: stop.in_hubs) {
-                    auto hub_id = kv.first;
-                    auto walking_time = kv.second;
+            for (const auto& hub_id: improved_hubs) {
+                // We need to check if hub_id, which is the out-hub of some stop,
+                // is the in-hub of some other stop
+                if (m_timetable->inverse_in_hubs().count(hub_id)) {
+                    for (const auto& kv: m_timetable->inverse_in_hubs().at(hub_id)) {
+                        auto stop_id = kv.first;
+                        auto walking_time = kv.second;
 
-                    if (tmp_hub_labels[hub_id]) {
-                        labels[stop.id].back() = std::min(
-                                labels[stop.id].back(),
-                                tmp_hub_labels[hub_id] + walking_time
-                        );
+                        if (tmp_hub_labels[hub_id]) {
+                            labels[stop_id].back() = std::min(
+                                    labels[stop_id].back(),
+                                    tmp_hub_labels[hub_id] + walking_time
+                            );
+                        }
+
+                        if (labels[stop_id].back() < earliest_arrival_time[stop_id]) {
+                            marked_stops.insert(stop_id);
+                            earliest_arrival_time[stop_id] = labels[stop_id].back();
+                        }
                     }
-                }
-
-                if (labels[stop.id].back() < earliest_arrival_time[stop.id]) {
-                    marked_stops.insert(stop.id);
-                    earliest_arrival_time[stop.id] = labels[stop.id].back();
                 }
             }
         }

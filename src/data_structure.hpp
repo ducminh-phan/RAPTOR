@@ -7,6 +7,7 @@
 #include <limits> // std::numeric_limits
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -52,6 +53,9 @@ public:
     }
 };
 
+using hubs_t = std::unordered_map<node_id_t, Time>;
+using inverse_hubs_t = std::unordered_map<node_id_t, hubs_t>;
+
 struct Transfer {
     node_id_t dest;
     Time time;
@@ -63,8 +67,8 @@ struct Stop {
     node_id_t id;
     std::vector<route_id_t> routes;
     std::vector<Transfer> transfers;
-    std::unordered_map<node_id_t, Time> in_hubs;
-    std::unordered_map<node_id_t, Time> out_hubs;
+    hubs_t in_hubs;
+    hubs_t out_hubs;
 
     bool is_valid() const { return !routes.empty(); }
 };
@@ -93,6 +97,7 @@ private:
     std::vector<Route> m_routes;
     std::vector<Stop> m_stops;
     std::unordered_map<trip_id_t, trip_pos_t> m_trip_positions;
+    inverse_hubs_t m_inverse_in_hubs;
 
     void parse_data();
 
@@ -120,6 +125,8 @@ public:
     const Stop& stops(node_id_t stop_id) const { return m_stops[stop_id]; }
 
     const trip_pos_t& trip_positions(trip_id_t trip_id) const { return m_trip_positions.at(trip_id); }
+
+    const inverse_hubs_t& inverse_in_hubs() const { return m_inverse_in_hubs; }
 
     Timetable(std::string name, std::string algo) : m_name {std::move(name)}, m_algo {std::move(algo)} {
         m_path = "../Public-Transit-Data/" + m_name + "/";

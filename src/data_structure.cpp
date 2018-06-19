@@ -82,8 +82,10 @@ void Timetable::parse_hubs() {
         auto node_id = static_cast<node_id_t>((*iter)[0]);
         auto stop_id = static_cast<node_id_t>((*iter)[1]);
         auto distance = static_cast<distance_t>((*iter)[2]);
+        auto time = distance_to_time(distance);
 
-        m_stops[stop_id].in_hubs.emplace(node_id, distance_to_time(distance));
+        m_stops[stop_id].in_hubs.emplace(node_id, time);
+        m_inverse_in_hubs[node_id].emplace(stop_id, time);
     }
 
     auto out_hub_file = read_dataset_file<igzstream>(m_path + "out_hubs.gr.gz");
