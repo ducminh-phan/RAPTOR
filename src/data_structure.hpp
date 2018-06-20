@@ -53,7 +53,7 @@ public:
     }
 };
 
-using hubs_t = std::unordered_map<node_id_t, Time>;
+using hubs_t = std::vector<std::pair<node_id_t, Time>>;
 using inverse_hubs_t = std::unordered_map<node_id_t, hubs_t>;
 
 struct Transfer {
