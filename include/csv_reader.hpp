@@ -7,12 +7,17 @@
 #include <vector>
 #include <string>
 
+#include "utilities.hpp"
+
 template<class T>
 class CSVRow {
 private:
+    char m_delim;
     std::vector<T> m_data;
 
 public:
+    explicit CSVRow(char delim = ',') : m_delim {delim} {}
+
     T const& operator[](std::size_t index) const {
         return m_data[index];
     }
@@ -29,7 +34,10 @@ public:
         std::string cell;
 
         m_data.clear();
-        while (std::getline(line_stream, cell, ',')) {
+        while (std::getline(line_stream, cell, m_delim)) {
+            // We make a stringstream from each cell in the line
+            // to convert it to type T
+
             std::stringstream cell_stream {cell};
             T val;
 
@@ -62,26 +70,26 @@ public:
 template<class T>
 class CSVIterator {
 private:
+    std::istream* m_istream;
     bool m_header;
-    std::istream* m_str;
     CSVRow<T> m_row;
 
 public:
-    explicit CSVIterator(std::istream& str, bool header = true) :
-            m_str {str.good() ? &str : nullptr}, m_header {header} {
+    explicit CSVIterator(std::istream* str_ptr, bool header = true, char delim = ',') :
+            m_istream {(*str_ptr).good() ? str_ptr : nullptr}, m_header {header}, m_row {delim} {
         ++(*this);
 
         // skip the header
         if (m_header) ++(*this);
     };
 
-    CSVIterator() : m_str {nullptr}, m_header {true} {};
+    CSVIterator() : m_istream {nullptr}, m_header {true} {};
 
     // Prefix increment
     CSVIterator<T>& operator++() {
-        if (m_str) {
-            if (!((*m_str) >> m_row)) {
-                m_str = nullptr;
+        if (m_istream) {
+            if (!((*m_istream) >> m_row)) {
+                m_istream = nullptr;
             }
         }
 
@@ -100,7 +108,7 @@ public:
     CSVRow<T> const* operator->() const { return &m_row; }
 
     bool operator==(CSVIterator<T> const& rhs) {
-        return ((this == &rhs) || ((this->m_str == nullptr) && (rhs.m_str == nullptr)));
+        return ((this == &rhs) || ((this->m_istream == nullptr) && (rhs.m_istream == nullptr)));
     }
 
     bool operator!=(CSVIterator<T> const& rhs) { return !((*this) == rhs); }

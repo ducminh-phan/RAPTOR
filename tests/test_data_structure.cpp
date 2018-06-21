@@ -16,7 +16,7 @@ bool test_stop_times(const Timetable& timetable) {
 }
 
 TEST_CASE("Check if the stop times are in order", "[stop_times]") {
-    Timetable timetable {"Paris"};
+    Timetable timetable {"Paris", "R"};
     timetable.summary();
 
     CHECK(test_stop_times(timetable));
