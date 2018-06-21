@@ -1,8 +1,9 @@
 add_library(raptor_lib
         data_structure.cpp data_structure.hpp
-        raptor.cpp raptor.hpp
+        raptor.cpp raptor.hpp)
+add_executable(raptor
+        main.cpp
         experiments.cpp experiments.hpp)
-add_executable(raptor main.cpp)
 
 target_link_libraries(raptor raptor_lib)
 target_link_libraries(raptor z)
