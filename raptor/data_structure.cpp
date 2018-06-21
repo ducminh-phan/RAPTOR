@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 
 #include "data_structure.hpp"
@@ -84,8 +85,8 @@ void Timetable::parse_hubs() {
         auto distance = static_cast<distance_t>((*iter)[2]);
         auto time = distance_to_time(distance);
 
-        m_stops[stop_id].in_hubs.emplace_back(node_id, time);
-        m_inverse_in_hubs[node_id].emplace_back(stop_id, time);
+        m_stops[stop_id].in_hubs.emplace_back(time, node_id);
+        m_inverse_in_hubs[node_id].emplace_back(time, stop_id);
     }
 
     auto out_hub_file = read_dataset_file<igzstream>(m_path + "out_hubs.gr.gz");
@@ -95,7 +96,16 @@ void Timetable::parse_hubs() {
         auto node_id = static_cast<node_id_t>((*iter)[1]);
         auto distance = static_cast<distance_t>((*iter)[2]);
 
-        m_stops[stop_id].out_hubs.emplace_back(node_id, distance_to_time(distance));
+        m_stops[stop_id].out_hubs.emplace_back(distance_to_time(distance), node_id);
+    }
+
+    for (auto& stop: m_stops) {
+        std::sort(stop.in_hubs.begin(), stop.in_hubs.end());
+        std::sort(stop.out_hubs.begin(), stop.out_hubs.end());
+    }
+
+    for (auto& kv: m_inverse_in_hubs) {
+        std::sort(kv.second.begin(), kv.second.end());
     }
 }
 

@@ -116,14 +116,14 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
     if (m_algo == "HLR") {
         // Find the time to get to the target using only the walking graph
         for (const auto& kv: m_timetable->stops(source_id).out_hubs) {
-            auto hub_id = kv.first;
-            auto walking_time = kv.second;
+            auto walking_time = kv.first;
+            auto hub_id = kv.second;
 
             tmp_hub_labels[hub_id] = std::min(tmp_hub_labels[hub_id], departure_time + walking_time);
         }
         for (const auto& kv: m_timetable->stops(target_id).in_hubs) {
-            auto hub_id = kv.first;
-            auto walking_time = kv.second;
+            auto walking_time = kv.first;
+            auto hub_id = kv.second;
 
             if (tmp_hub_labels[hub_id]) {
                 labels[target_id].back() = std::min(
@@ -212,10 +212,15 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
             for (const auto& stop_id: marked_stops) {
                 for (const auto& kv: m_timetable->stops(stop_id).out_hubs) {
-                    auto hub_id = kv.first;
-                    auto walking_time = kv.second;
+                    auto walking_time = kv.first;
+                    auto hub_id = kv.second;
 
                     auto tmp = labels[stop_id].back() + walking_time;
+
+                    // Since we sort the links stop->out-hub in the increasing order of walking time,
+                    // as soon as the arrival time propagated to a hub is after the earliest arrival time
+                    // at the target, there is no need to propagate to the next hubs
+                    if (tmp > earliest_arrival_time[target_id]) break;
 
                     if (tmp < tmp_hub_labels[hub_id]) {
                         tmp_hub_labels[hub_id] = tmp;
@@ -229,14 +234,14 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
                 // is the in-hub of some other stop
                 if (m_timetable->inverse_in_hubs().count(hub_id)) {
                     for (const auto& kv: m_timetable->inverse_in_hubs().at(hub_id)) {
-                        auto stop_id = kv.first;
-                        auto walking_time = kv.second;
+                        auto walking_time = kv.first;
+                        auto stop_id = kv.second;
+
+                        auto tmp = tmp_hub_labels[hub_id] + walking_time;
+                        if (tmp > earliest_arrival_time[target_id]) break;
 
                         if (tmp_hub_labels[hub_id]) {
-                            labels[stop_id].back() = std::min(
-                                    labels[stop_id].back(),
-                                    tmp_hub_labels[hub_id] + walking_time
-                            );
+                            labels[stop_id].back() = std::min(labels[stop_id].back(), tmp);
                         }
 
                         if (labels[stop_id].back() < earliest_arrival_time[stop_id]) {
