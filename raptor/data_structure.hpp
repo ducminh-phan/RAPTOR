@@ -19,7 +19,7 @@ using route_id_t = uint16_t;
 using trip_pos_t = std::pair<route_id_t, size_t>;
 using distance_t = uint32_t;
 
-extern const trip_id_t null_trip;
+extern const trip_id_t NULL_TRIP;
 
 class Time {
 public:
@@ -35,7 +35,13 @@ public:
 
     const value_type& val() { return m_val; }
 
-    friend Time operator+(const Time& t1, const Time& t2) { return Time {t1.m_val + t2.m_val}; }
+    friend Time operator+(const Time& t1, const Time& t2) {
+        // Make sure ∞ + c = ∞
+        if (t1.m_val == inf || t2.m_val == inf) return {};
+
+        // m_val is small compared to inf, so we don't have to worry about overflow here
+        return Time(t1.m_val + t2.m_val);
+    }
 
     friend bool operator<(const Time& t1, const Time& t2) { return t1.m_val < t2.m_val; }
 
@@ -44,8 +50,6 @@ public:
     friend bool operator>=(const Time& t1, const Time& t2) { return !(t1 < t2); }
 
     friend bool operator<=(const Time& t1, const Time& t2) { return !(t1 > t2); }
-
-    explicit operator bool() { return m_val < inf; }
 
     friend std::ostream& operator<<(std::ostream& out, const Time& t) {
         out << t.m_val;

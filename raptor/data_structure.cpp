@@ -5,7 +5,7 @@
 #include "csv_reader.hpp"
 #include "gzstream.h"
 
-extern const trip_id_t null_trip = -1;
+extern const trip_id_t NULL_TRIP = -1;
 
 void Timetable::parse_data() {
     Timer timer;

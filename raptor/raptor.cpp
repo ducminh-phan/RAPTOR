@@ -74,7 +74,7 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const labels_t& labels,
     auto iter = stop_times.begin();
     auto last = stop_times.end();
     std::vector<size_t> stop_idx = route.stop_positions.at(stop_id);
-    trip_id_t earliest_trip = null_trip;
+    trip_id_t earliest_trip = NULL_TRIP;
     Time earliest_time;
 
     // Iterate over the trips
@@ -125,12 +125,10 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
             auto walking_time = kv.first;
             auto hub_id = kv.second;
 
-            if (tmp_hub_labels[hub_id]) {
-                labels[target_id].back() = std::min(
-                        labels[target_id].back(),
-                        tmp_hub_labels[hub_id] + walking_time
-                );
-            }
+            labels[target_id].back() = std::min(
+                    labels[target_id].back(),
+                    tmp_hub_labels[hub_id] + walking_time
+            );
         }
 
         earliest_arrival_time[target_id] = labels[target_id].back();
@@ -154,7 +152,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
             auto stop_id = route_stop.second;
             auto& route = m_timetable->routes(route_id);
 
-            trip_id_t t = null_trip;
+            trip_id_t t = NULL_TRIP;
             size_t stop_idx = route.stop_positions.at(stop_id).front();
 
             // Iterate over the stops of the route beginning with stop_id
@@ -162,7 +160,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
                 node_id_t p_i = route.stops[i];
                 Time dep, arr;
 
-                if (t != null_trip) {
+                if (t != NULL_TRIP) {
                     // Get the position of the trip t
                     trip_pos_t trip_pos = m_timetable->trip_positions(t);
                     size_t pos = trip_pos.second;
@@ -240,9 +238,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
                         auto tmp = tmp_hub_labels[hub_id] + walking_time;
                         if (tmp > earliest_arrival_time[target_id]) break;
 
-                        if (tmp_hub_labels[hub_id]) {
-                            labels[stop_id].back() = std::min(labels[stop_id].back(), tmp);
-                        }
+                        labels[stop_id].back() = std::min(labels[stop_id].back(), tmp);
 
                         if (labels[stop_id].back() < earliest_arrival_time[stop_id]) {
                             marked_stops.insert(stop_id);
