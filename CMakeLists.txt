@@ -6,15 +6,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS "-Wall -O3")
 
-include_directories(include)
-add_executable(raptor
-        src/main.cpp
-        src/data_structure.cpp src/data_structure.hpp
-        src/raptor.cpp src/raptor.hpp
-        src/experiments.cpp src/experiments.hpp)
-add_executable(gen_query
-        gen_query/main.cpp
-        gen_query/hub_labelling.cpp gen_query/hub_labelling.hpp)
+set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/catch)
+add_library(Catch INTERFACE)
+target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 
-target_link_libraries(raptor z)
-target_link_libraries(gen_query z)
+file(MAKE_DIRECTORY ${CATCH_INCLUDE_DIR}/build)
+
+include_directories(include)
+include_directories(raptor)
+add_subdirectory(gen_query)
+add_subdirectory(raptor)
+add_subdirectory(tests)
