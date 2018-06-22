@@ -6,12 +6,13 @@
 
 #include "data_structure.hpp"
 
+
 class Label {
 private:
-    _time_t _arrival_time;
-    _time_t _walking_time;
+    Time _arrival_time;
+    Time _walking_time;
 public:
-    Label(_time_t t, _time_t w) : _arrival_time {t}, _walking_time {w} {}
+    Label(Time t, Time w) : _arrival_time {t}, _walking_time {w} {}
 
     friend bool operator<(const Label& label1, const Label& label2) {
         return (label1._arrival_time < label2._arrival_time);
@@ -30,13 +31,14 @@ public:
     }
 };
 
+
 class Bag {
 private:
     std::set<Label> _labels;
 public:
     void insert(const Label& in_label);
 
-    void insert(const _time_t& t, const _time_t& w);
+    void insert(const Time& t, const Time& w);
 
     std::set<Label> labels() { return _labels; };
 

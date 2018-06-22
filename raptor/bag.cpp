@@ -1,5 +1,6 @@
 #include "bag.hpp"
 
+
 void Bag::insert(const Label& in_label) {
     std::vector<Label> dominated_labels;
     bool is_dominated = false;
@@ -31,13 +32,15 @@ void Bag::insert(const Label& in_label) {
     }
 }
 
-void Bag::insert(const _time_t& t, const _time_t& w) {
+
+void Bag::insert(const Time& t, const Time& w) {
     Label in_label {t, w};
-    this->insert(in_label);
+    insert(in_label);
 }
+
 
 void Bag::merge(const Bag& other) {
     for (const auto& label: other._labels) {
-        this->insert(label);
+        insert(label);
     }
 }
