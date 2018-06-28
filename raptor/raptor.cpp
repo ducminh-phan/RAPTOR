@@ -58,9 +58,11 @@ route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops, const b
 
 
 // Find the earliest trip in route r that one can catch at stop s in round k,
-// i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s)
+// i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s),
+// or the latest trip t such that t_arr(t, s) <= t_(k-1) (s) if the query is backward
 trip_id_t Raptor::earliest_trip(const uint16_t& round, const labels_t& labels,
-                                const route_id_t& route_id, const node_id_t& stop_id) {
+                                const route_id_t& route_id, const node_id_t& stop_id,
+                                const bool& backward) {
     static std::unordered_map<cache_key_t, trip_id_t, cache_key_hash> cache;
     Time t = labels.at(stop_id)[round - 1];
 
@@ -70,7 +72,7 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const labels_t& labels,
     // This speeds up the function since the label could be the same in several rounds,
     // so that we do not need to find the earliest trip again in another round if the
     // label remains the same.
-    auto key = std::make_tuple(t.val(), route_id, stop_id);
+    cache_key_t key = std::make_tuple(t.val(), route_id, stop_id, backward);
     auto search = cache.find(key);
     if (search != cache.end()) {
         delete prof_c;
@@ -83,28 +85,33 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const labels_t& labels,
     const auto& route = m_timetable->routes(route_id);
 
     const auto& stop_times = route.stop_times;
-    auto iter = stop_times.begin();
-    auto last = stop_times.end();
-    std::vector<size_t> stop_idx = route.stop_positions.at(stop_id);
+    const auto& stop_idx = route.stop_positions.at(stop_id);
     trip_id_t earliest_trip = NULL_TRIP;
     Time earliest_time;
 
-    // Iterate over the trips
-    while (iter != last) {
-        trip_id_t r = route.trips[iter - stop_times.begin()];
+    for (size_t j = 0; j < stop_times.size(); ++j) {
+        size_t i = backward ? stop_times.size() - 1 - j : j;
+
+        trip_id_t r = route.trips[i];
 
         // Iterate over the appearances of the stop in the trip
         for (const auto& idx: stop_idx) {
-            // The departure time of the current trip at stop_id
-            const Time& dep = (*iter).at(idx).dep;
+            // The departure and arrival times of the current trip at stop_id
+            const Time& dep = stop_times.at(i).at(idx).dep;
+            const Time& arr = stop_times.at(i).at(idx).arr;
 
-            if (dep >= t && dep < earliest_time) {
-                earliest_trip = r;
-                earliest_time = dep;
+            if (backward) {
+                if (arr <= t && arr > earliest_time) {
+                    earliest_trip = r;
+                    earliest_time = arr;
+                }
+            } else {
+                if (dep >= t && dep < earliest_time) {
+                    earliest_trip = r;
+                    earliest_time = dep;
+                }
             }
         }
-
-        ++iter;
     }
 
     cache[key] = earliest_trip;

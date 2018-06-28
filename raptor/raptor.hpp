@@ -23,7 +23,8 @@ private:
     route_stop_queue_t make_queue(std::set<node_id_t>& marked_stops, const bool& backward = false);
 
     trip_id_t earliest_trip(const uint16_t& round, const labels_t& labels,
-                            const route_id_t& route_id, const node_id_t& stop_id);
+                            const route_id_t& route_id, const node_id_t& stop_id,
+                            const bool& backward = false);
 
 public:
     Raptor(std::string algo, const Timetable* timetable_p) :
@@ -32,11 +33,11 @@ public:
     std::vector<Time> query(const node_id_t& source_id, const node_id_t& target_id, const Time& departure_time);
 };
 
-using cache_key_t = std::tuple<Time::value_type, route_id_t, node_id_t>;
+using cache_key_t = std::tuple<Time::value_type, route_id_t, node_id_t, bool>;
 
 struct cache_key_hash : public std::unary_function<cache_key_t, size_t> {
     size_t operator()(const cache_key_t& k) const {
-        return std::get<0>(k) ^ std::get<1>(k) ^ std::get<2>(k);
+        return std::get<0>(k) ^ std::get<1>(k) ^ std::get<2>(k) ^ std::get<3>(k);
     }
 };
 
