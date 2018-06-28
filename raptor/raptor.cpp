@@ -3,18 +3,29 @@
 
 #include "raptor.hpp"
 
-// Check if stop1 comes before stop2 in the route
-bool Raptor::check_stops_order(const route_id_t& route_id, const node_id_t& stop1, const node_id_t& stop2) {
+
+// Check if stop1 comes before/after stop2 in the route
+bool Raptor::check_stops_order(const route_id_t& route_id, const node_id_t& stop1, const node_id_t& stop2,
+                               const bool& backward) {
     Profiler prof {__func__};
 
     const auto& route = m_timetable->routes(route_id);
-    const auto& idx1 = route.stop_positions.at(stop1).front();
-    const auto& idx2 = route.stop_positions.at(stop2).front();
 
-    return idx1 < idx2;
+    if (backward) {
+        const auto& idx1 = route.stop_positions.at(stop1).back();
+        const auto& idx2 = route.stop_positions.at(stop2).back();
+
+        return idx1 > idx2;
+    } else {
+        const auto& idx1 = route.stop_positions.at(stop1).front();
+        const auto& idx2 = route.stop_positions.at(stop2).front();
+
+        return idx1 < idx2;
+    }
 }
 
-route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops) {
+
+route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops, const bool& backward) {
     Profiler prof {__func__};
 
     route_stop_queue_t queue;
@@ -30,7 +41,7 @@ route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops) {
                 auto p = route_iter->second;
 
                 // If s comes before p, replace p by s
-                if (check_stops_order(route_id, stop_id, p)) {
+                if (check_stops_order(route_id, stop_id, p, backward)) {
                     queue[route_id] = stop_id;
                 }
             } else {
@@ -44,6 +55,7 @@ route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops) {
 
     return queue;
 }
+
 
 // Find the earliest trip in route r that one can catch at stop s in round k,
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s)
@@ -98,6 +110,7 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const labels_t& labels,
     cache[key] = earliest_trip;
     return earliest_trip;
 }
+
 
 std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& target_id, const Time& departure_time) {
     labels_t labels;

@@ -17,9 +17,10 @@ private:
     const std::string m_algo;
     const Timetable* const m_timetable;
 
-    bool check_stops_order(const route_id_t& route, const node_id_t& stop1, const node_id_t& stop2);
+    bool check_stops_order(const route_id_t& route, const node_id_t& stop1, const node_id_t& stop2,
+                           const bool& backward = false);
 
-    route_stop_queue_t make_queue(std::set<node_id_t>& marked_stops);
+    route_stop_queue_t make_queue(std::set<node_id_t>& marked_stops, const bool& backward = false);
 
     trip_id_t earliest_trip(const uint16_t& round, const labels_t& labels,
                             const route_id_t& route_id, const node_id_t& stop_id);
