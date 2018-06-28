@@ -31,6 +31,8 @@ public:
             m_algo {std::move(algo)}, m_timetable {timetable_p} {}
 
     std::vector<Time> query(const node_id_t& source_id, const node_id_t& target_id, const Time& departure_time);
+
+    Time backward_query(const node_id_t& source_id, const node_id_t& target_id, const Time& departure_time);
 };
 
 using cache_key_t = std::tuple<Time::value_type, route_id_t, node_id_t, bool>;

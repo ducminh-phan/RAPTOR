@@ -43,6 +43,12 @@ public:
         return Time(t1.m_val + t2.m_val);
     }
 
+    friend Time operator-(const Time& t1, const Time& t2) {
+        if (t1.m_val <= t2.m_val) return Time(0);
+
+        return Time(t1.m_val - t2.m_val);
+    }
+
     friend bool operator<(const Time& t1, const Time& t2) { return t1.m_val < t2.m_val; }
 
     friend bool operator>(const Time& t1, const Time& t2) { return t1.m_val > t2.m_val; }
@@ -71,6 +77,7 @@ struct Stop {
     node_id_t id;
     std::vector<route_id_t> routes;
     std::vector<Transfer> transfers;
+    std::vector<Transfer> backward_transfers;
     hubs_t in_hubs;
     hubs_t out_hubs;
 
@@ -102,6 +109,7 @@ private:
     std::vector<Stop> m_stops;
     std::unordered_map<trip_id_t, trip_pos_t> m_trip_positions;
     inverse_hubs_t m_inverse_in_hubs;
+    inverse_hubs_t m_inverse_out_hubs;
 
     void parse_data();
 
@@ -131,6 +139,8 @@ public:
     const trip_pos_t& trip_positions(trip_id_t trip_id) const { return m_trip_positions.at(trip_id); }
 
     const inverse_hubs_t& inverse_in_hubs() const { return m_inverse_in_hubs; }
+
+    const inverse_hubs_t& inverse_out_hubs() const { return m_inverse_out_hubs; }
 
     Timetable(std::string name, std::string algo) : m_name {std::move(name)}, m_algo {std::move(algo)} {
         m_path = "../Public-Transit-Data/" + m_name + "/";

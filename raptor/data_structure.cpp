@@ -72,6 +72,7 @@ void Timetable::parse_transfers() {
 
         if (m_stops[from].is_valid() && m_stops[to].is_valid()) {
             m_stops[from].transfers.emplace_back(to, time);
+            m_stops[to].backward_transfers.emplace_back(from, time);
         }
     }
 }
@@ -95,8 +96,10 @@ void Timetable::parse_hubs() {
         auto stop_id = static_cast<node_id_t>((*iter)[0]);
         auto node_id = static_cast<node_id_t>((*iter)[1]);
         auto distance = static_cast<distance_t>((*iter)[2]);
+        auto time = distance_to_time(distance);
 
-        m_stops[stop_id].out_hubs.emplace_back(distance_to_time(distance), node_id);
+        m_stops[stop_id].out_hubs.emplace_back(time, node_id);
+        m_inverse_out_hubs[node_id].emplace_back(time, stop_id);
     }
 
     for (auto& stop: m_stops) {
@@ -105,6 +108,10 @@ void Timetable::parse_hubs() {
     }
 
     for (auto& kv: m_inverse_in_hubs) {
+        std::sort(kv.second.begin(), kv.second.end());
+    }
+
+    for (auto& kv: m_inverse_out_hubs) {
         std::sort(kv.second.begin(), kv.second.end());
     }
 }

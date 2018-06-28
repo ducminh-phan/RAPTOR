@@ -273,3 +273,131 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
     Profiler::clear();
     return labels[target_id];
 }
+
+
+Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_id, const Time& arrival_time) {
+    labels_t labels;
+    std::set<node_id_t> marked_stops;
+    std::unordered_map<node_id_t, Time> latest_departure_time;
+
+    // Initialisation
+    for (const auto& stop: m_timetable->stops()) {
+        latest_departure_time.emplace(stop.id, 0);
+        labels[stop.id].emplace_back(0);
+    }
+    latest_departure_time[target_id] = {arrival_time};
+    marked_stops.insert(target_id);
+    std::unordered_map<node_id_t, Time> tmp_hub_labels;
+
+    uint16_t round {1};
+    while (true) {
+        // Second stage
+        auto queue = make_queue(marked_stops, true);
+
+        // Traverse each route
+        for (const auto& route_stop: queue) {
+            auto route_id = route_stop.first;
+            auto stop_id = route_stop.second;
+            auto& route = m_timetable->routes(route_id);
+
+            trip_id_t t = NULL_TRIP;
+            int stop_idx = route.stop_positions.at(stop_id).front();
+
+            // Iterate over the stops of the route beginning with stop_id in the reverse order
+            for (int i = stop_idx; i >= 0; --i) {
+                node_id_t p_i = route.stops[i];
+                Time dep, arr;
+
+                if (t != NULL_TRIP) {
+                    // Get the position of the trip t
+                    trip_pos_t trip_pos = m_timetable->trip_positions(t);
+                    size_t pos = trip_pos.second;
+
+                    // Get the departure and arrival time of the trip t at the stop p_i
+                    dep = route.stop_times[pos][i].dep;
+                    arr = route.stop_times[pos][i].arr;
+
+                    // Local and target pruning
+                    if (dep > std::max(latest_departure_time[p_i], latest_departure_time[target_id])) {
+                        labels[p_i][round] = dep;
+                        latest_departure_time[p_i] = dep;
+                        marked_stops.insert(p_i);
+                    }
+                }
+
+                // Check if we can depart by a later trip at p_i
+                if (labels[p_i][round - 1] >= arr) {
+                    t = earliest_trip(round, labels, route_id, p_i, true);
+                }
+            }
+        }
+
+        ++round;
+        if (marked_stops.empty()) break;
+
+        // Third stage, look at footpaths
+
+        if (m_algo == "R") {
+            for (const auto& stop_id: marked_stops) {
+                for (const auto& transfer: m_timetable->stops(stop_id).backward_transfers) {
+                    auto dest_id = transfer.dest;
+                    auto transfer_time = transfer.time;
+
+                    labels[dest_id].back() = std::max(
+                            labels[dest_id].back(),
+                            labels[stop_id].back() - transfer_time
+                    );
+
+                    marked_stops.insert(dest_id);
+                }
+            }
+        }
+
+        if (m_algo == "HLR") {
+            std::unordered_set<node_id_t> improved_hubs;
+
+            for (const auto& stop_id: marked_stops) {
+                for (const auto& kv: m_timetable->stops(stop_id).in_hubs) {
+                    auto walking_time = kv.first;
+                    auto hub_id = kv.second;
+
+                    auto tmp = labels[stop_id].back() - walking_time;
+
+                    // Since we sort the links stop->out-hub in the increasing order of walking time,
+                    // as soon as the arrival time propagated to a hub is after the earliest arrival time
+                    // at the target, there is no need to propagate to the next hubs
+                    if (tmp < latest_departure_time[target_id]) break;
+
+                    if (tmp > tmp_hub_labels[hub_id]) {
+                        tmp_hub_labels[hub_id] = tmp;
+                        improved_hubs.insert(hub_id);
+                    }
+                }
+            }
+
+            for (const auto& hub_id: improved_hubs) {
+                // We need to check if hub_id, which is the out-hub of some stop,
+                // is the in-hub of some other stop
+                if (m_timetable->inverse_out_hubs().count(hub_id)) {
+                    for (const auto& kv: m_timetable->inverse_out_hubs().at(hub_id)) {
+                        auto walking_time = kv.first;
+                        auto stop_id = kv.second;
+
+                        auto tmp = tmp_hub_labels[hub_id] - walking_time;
+                        if (tmp < latest_departure_time[target_id]) break;
+
+                        labels[stop_id].back() = std::max(labels[stop_id].back(), tmp);
+
+                        if (labels[stop_id].back() > latest_departure_time[stop_id]) {
+                            marked_stops.insert(stop_id);
+                            latest_departure_time[stop_id] = labels[stop_id].back();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Profiler::clear();
+    return labels[target_id].back();
+}
