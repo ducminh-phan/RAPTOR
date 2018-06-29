@@ -134,25 +134,10 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
     std::unordered_map<node_id_t, Time> tmp_hub_labels;
 
     if (m_algo == "HLR") {
-        // Find the time to get to the target using only the walking graph
-        for (const auto& kv: m_timetable->stops(source_id).out_hubs) {
-            auto walking_time = kv.first;
-            auto hub_id = kv.second;
+        auto arrival_time = departure_time + m_timetable->walking_time(source_id, target_id);
 
-            tmp_hub_labels[hub_id] = std::min(tmp_hub_labels[hub_id], departure_time + walking_time);
-        }
-        for (const auto& kv: m_timetable->stops(target_id).in_hubs) {
-            auto walking_time = kv.first;
-            auto hub_id = kv.second;
-
-            labels[target_id].back() = std::min(
-                    labels[target_id].back(),
-                    tmp_hub_labels[hub_id] + walking_time
-            );
-        }
-
-        earliest_arrival_time[target_id] = labels[target_id].back();
-        tmp_hub_labels.clear();
+        labels[target_id].back() = arrival_time;
+        earliest_arrival_time[target_id] = arrival_time;
     }
 
     uint16_t round {1};

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
@@ -92,6 +93,10 @@ namespace {
     std::unordered_map<std::string, double> Profiler::m_time_log;
     std::unordered_map<std::string, int> Profiler::m_call_log;
 
+    class NotImplemented : public std::logic_error {
+    public:
+        NotImplemented() : std::logic_error("Function not yet implemented") {};
+    };
 }
 
 #endif // UTILITIES_HPP

@@ -13,6 +13,7 @@
 
 #include "utilities.hpp"
 
+
 using node_id_t = uint32_t;
 using trip_id_t = int32_t;
 using route_id_t = uint16_t;
@@ -20,6 +21,7 @@ using trip_pos_t = std::pair<route_id_t, size_t>;
 using distance_t = uint32_t;
 
 extern const trip_id_t NULL_TRIP;
+
 
 class Time {
 public:
@@ -65,8 +67,10 @@ public:
     }
 };
 
+
 using hubs_t = std::vector<std::pair<Time, node_id_t>>;
 using inverse_hubs_t = std::unordered_map<node_id_t, hubs_t>;
+
 
 struct Transfer {
     node_id_t dest;
@@ -74,6 +78,7 @@ struct Transfer {
 
     Transfer(node_id_t dest, Time::value_type time) : dest {dest}, time {time} {};
 };
+
 
 struct Stop {
     node_id_t id;
@@ -86,6 +91,7 @@ struct Stop {
     bool is_valid() const { return !routes.empty(); }
 };
 
+
 struct StopTime {
     node_id_t stop_id;
     Time arr;
@@ -94,6 +100,7 @@ struct StopTime {
     StopTime(node_id_t s, Time::value_type a, Time::value_type d) : stop_id {s}, arr {a}, dep {d} {};
 };
 
+
 struct Route {
     route_id_t id;
     std::vector<trip_id_t> trips;
@@ -101,6 +108,7 @@ struct Route {
     std::vector<std::vector<StopTime>> stop_times;
     std::unordered_map<node_id_t, std::vector<size_t>> stop_positions;
 };
+
 
 class Timetable {
 private:
@@ -144,6 +152,8 @@ public:
 
     const inverse_hubs_t& inverse_out_hubs() const { return m_inverse_out_hubs; }
 
+    Time walking_time(const node_id_t& source_id, const node_id_t& target_id) const;
+
     Timetable(std::string name, std::string algo) : m_name {std::move(name)}, m_algo {std::move(algo)} {
         m_path = "../Public-Transit-Data/" + m_name + "/";
         parse_data();
@@ -151,6 +161,7 @@ public:
 
     void summary() const;
 };
+
 
 Time distance_to_time(const distance_t& d);
 
