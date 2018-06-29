@@ -25,15 +25,17 @@ extern const trip_id_t NULL_TRIP;
 
 class Time {
 public:
-    using value_type = uint32_t;
+    using value_type = int32_t;
 private:
     value_type m_val;
 public:
     const static value_type inf = std::numeric_limits<value_type>::max();
 
+    const static value_type neg_inf = std::numeric_limits<value_type>::min();
+
     Time() : m_val {inf} {};
 
-    explicit Time(value_type val_) : m_val {val_} {}
+    explicit Time(value_type val) : m_val {val} {}
 
     const value_type& val() { return m_val; }
 

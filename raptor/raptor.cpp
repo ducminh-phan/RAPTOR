@@ -87,7 +87,7 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const labels_t& labels,
     const auto& stop_times = route.stop_times;
     const auto& stop_idx = route.stop_positions.at(stop_id);
     trip_id_t earliest_trip = NULL_TRIP;
-    Time earliest_time;
+    Time earliest_time {backward ? Time::neg_inf : Time::inf};
 
     for (size_t j = 0; j < stop_times.size(); ++j) {
         size_t i = backward ? stop_times.size() - 1 - j : j;
@@ -270,12 +270,18 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
         latest_departure_time.emplace(stop.id, 0);
         labels[stop.id].emplace_back(0);
     }
+    labels[target_id] = {arrival_time};
     latest_departure_time[target_id] = {arrival_time};
     marked_stops.insert(target_id);
     std::unordered_map<node_id_t, Time> tmp_hub_labels;
 
     uint16_t round {1};
     while (true) {
+        // First stage
+        for (const auto& stop: m_timetable->stops()) {
+            labels[stop.id].emplace_back(labels[stop.id].back());
+        }
+
         // Second stage
         auto queue = make_queue(marked_stops, true);
 
@@ -291,7 +297,8 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
             // Iterate over the stops of the route beginning with stop_id in the reverse order
             for (int i = stop_idx; i >= 0; --i) {
                 node_id_t p_i = route.stops[i];
-                Time dep, arr;
+                Time dep;
+                Time arr {Time::neg_inf};
 
                 if (t != NULL_TRIP) {
                     // Get the position of the trip t
@@ -303,7 +310,7 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
                     arr = route.stop_times[pos][i].arr;
 
                     // Local and target pruning
-                    if (dep > std::max(latest_departure_time[p_i], latest_departure_time[target_id])) {
+                    if (dep > std::max(latest_departure_time[p_i], latest_departure_time[source_id])) {
                         labels[p_i][round] = dep;
                         latest_departure_time[p_i] = dep;
                         marked_stops.insert(p_i);
@@ -384,7 +391,7 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
     }
 
     Profiler::clear();
-    return labels[target_id].back();
+    return labels[source_id].back();
 }
 
 
