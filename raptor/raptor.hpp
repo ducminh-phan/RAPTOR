@@ -9,8 +9,10 @@
 
 #include "data_structure.hpp"
 
+
 using route_stop_queue_t = std::unordered_map<route_id_t, node_id_t>;
 using labels_t = std::unordered_map<node_id_t, std::vector<Time>>;
+
 
 class Raptor {
 private:
@@ -37,10 +39,14 @@ public:
 
 using cache_key_t = std::tuple<Time::value_type, route_id_t, node_id_t, bool>;
 
+
 struct cache_key_hash : public std::unary_function<cache_key_t, size_t> {
     size_t operator()(const cache_key_t& k) const {
         return std::get<0>(k) ^ std::get<1>(k) ^ std::get<2>(k) ^ std::get<3>(k);
     }
 };
+
+
+std::vector<Time> remove_dominated(const std::vector<Time>& times);
 
 #endif // RAPTOR_HPP

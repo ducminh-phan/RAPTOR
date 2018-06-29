@@ -401,3 +401,28 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
     Profiler::clear();
     return labels[target_id].back();
 }
+
+
+// Remove infinity and dominated times from the output of a RAPTOR query
+// For example, [inf, inf, 5, 5, 4, 4, 4, 2, 2, 1] -> [5, 4, 2, 1]
+std::vector<Time> remove_dominated(const std::vector<Time>& times) {
+    Time current_min;
+    bool first = true;
+    std::vector<Time> pareto_set;
+
+    for (const auto& t : times) {
+        // We keep only non-infinity times in the Pareto set
+        if (t) {
+            if (first) {
+                first = false;
+                current_min = t;
+                pareto_set.push_back(t);
+            } else if (t < current_min) {
+                current_min = t;
+                pareto_set.push_back(t);
+            }
+        }
+    }
+
+    return pareto_set;
+}
