@@ -1,5 +1,7 @@
 #include <algorithm> // std::find, std::min
+#include <functional>
 #include <iostream>
+#include <queue>
 
 #include "raptor.hpp"
 
@@ -392,6 +394,56 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
 
     Profiler::clear();
     return labels[source_id].back();
+}
+
+
+std::vector<std::pair<Time, Time>> Raptor::profile_query(const node_id_t& source_id, const node_id_t& target_id) {
+    std::vector<std::pair<Time, Time>> dep_arr_pairs;
+
+    std::set<Time> arrival_times_queue;
+    Time dep {0};
+    Time arr;
+    static const Time epsilon {1};
+
+    while (true) {
+        auto arrival_times = query(source_id, target_id, dep);
+        auto pareto_arrival_times = remove_dominated(arrival_times);
+
+        // Push all the possible arrival times from the forward query to the queue
+        for (const auto& t: pareto_arrival_times) {
+            arrival_times_queue.insert(t);
+        }
+
+        // Pick the earliest arrival time from the queue and perform a backward query
+        auto begin = arrival_times_queue.begin();
+        arr = *begin;
+        arrival_times_queue.erase(begin);
+        dep = backward_query(source_id, target_id, arr);
+
+        // Add the newly obtained entry to the list of results
+        dep_arr_pairs.emplace_back(dep, arr);
+
+        // Change t_dep -> t_dep + ε to continue the forward search
+        dep = dep + epsilon;
+
+        if (arrival_times_queue.empty()) break;
+    }
+
+    // We need to remove the entries dominated by a pure walking journey
+    if (m_algo == "HLR") {
+        auto walking_time = m_timetable->walking_time(source_id, target_id);
+        std::vector<std::pair<Time, Time>> non_dominated_entries;
+
+        for (const auto& pair: dep_arr_pairs) {
+            if (pair.second - pair.first < walking_time) {
+                non_dominated_entries.push_back(pair);
+            }
+        }
+
+        dep_arr_pairs = std::move(non_dominated_entries);
+    }
+
+    return dep_arr_pairs;
 }
 
 

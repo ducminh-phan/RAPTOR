@@ -20,20 +20,22 @@ void usage_exit(char* argv[]) {
         return acc;
     };
 
-    std::cerr << "Usage: " << argv[0] << " name algo\n\n"
+    std::cerr << "Usage: " << argv[0] << " name algo type\n\n"
               << paragraph("Run the RAPTOR/HL-RAPTOR algorithm with the generated queries and log "
                            "the running time and arrival times of each query.\n")
               << "Positional arguments:\n"
               << " name\tThe name of the dataset to be used in the algorithm\n"
-              << " algo\tThe choice of the algorithm: R for RAPTOR, HLR for HL-RAPTOR";
+              << " algo\tThe choice of the algorithm: R for RAPTOR, HLR for HL-RAPTOR\n"
+              << " type\tThe type of query: n for normal query, p for profile query\n";
     exit(1);
 }
 
 
 int main(int argc, char* argv[]) {
-    std::string algo {argc == 3 ? argv[2] : ""};
+    std::string algo {argc == 4 ? argv[2] : ""};
+    std::string query_type {argc == 4 ? argv[3] : ""};
 
-    if (argc != 3 || (algo != "R" && algo != "HLR")) {
+    if (argc != 4 || (algo != "R" && algo != "HLR") || (query_type != "p" && query_type != "n")) {
         usage_exit(argv);
     }
 
@@ -43,7 +45,7 @@ int main(int argc, char* argv[]) {
     timetable.summary();
 
     Experiment exp {&timetable};
-    exp.run(algo);
+    exp.run(algo, query_type);
 
     return 0;
 }

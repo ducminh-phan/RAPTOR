@@ -48,14 +48,19 @@ Queries Experiment::read_queries() {
 }
 
 
-void Experiment::run(const std::string& algo) const {
+void Experiment::run(const std::string& algo, const std::string& type) const {
     Results res;
     Raptor raptor {algo, m_timetable};
 
     for (const auto& query: m_queries) {
         Timer timer;
+        std::vector<Time> arrival_times;
 
-        auto arrival_times = raptor.query(query.source_id, query.target_id, query.dep);
+        if (type == "n") {
+            arrival_times = raptor.query(query.source_id, query.target_id, query.dep);
+        } else {
+            raptor.profile_query(query.source_id, query.target_id);
+        }
 
         double running_time = timer.elapsed();
 

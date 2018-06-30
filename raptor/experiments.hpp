@@ -47,7 +47,7 @@ public:
     explicit Experiment(const Timetable* timetable) :
             m_timetable {timetable}, m_queries {read_queries()} {}
 
-    void run(const std::string& algo) const;
+    void run(const std::string& algo, const std::string& type) const;
 };
 
 #endif // EXPERIMENTS_HPP

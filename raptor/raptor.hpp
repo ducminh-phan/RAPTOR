@@ -34,7 +34,9 @@ public:
 
     std::vector<Time> query(const node_id_t& source_id, const node_id_t& target_id, const Time& departure_time);
 
-    Time backward_query(const node_id_t& source_id, const node_id_t& target_id, const Time& departure_time);
+    Time backward_query(const node_id_t& source_id, const node_id_t& target_id, const Time& arrival_time);
+
+    std::vector<std::pair<Time, Time>> profile_query(const node_id_t& source_id, const node_id_t& target_id);
 };
 
 using cache_key_t = std::tuple<Time::value_type, route_id_t, node_id_t, bool>;
@@ -42,7 +44,7 @@ using cache_key_t = std::tuple<Time::value_type, route_id_t, node_id_t, bool>;
 
 struct cache_key_hash : public std::unary_function<cache_key_t, size_t> {
     size_t operator()(const cache_key_t& k) const {
-        return std::get<0>(k) ^ std::get<1>(k) ^ std::get<2>(k) ^ std::get<3>(k);
+        return static_cast<uint32_t>(std::get<0>(k)) ^ std::get<1>(k) ^ std::get<2>(k) ^ std::get<3>(k);
     }
 };
 
