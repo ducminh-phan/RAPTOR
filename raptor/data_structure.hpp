@@ -63,6 +63,13 @@ public:
 
     explicit operator bool() const { return m_val < inf; }
 
+    Time& operator=(const value_type val) {
+        this->m_val = val;
+        return *this;
+    }
+
+    Time& operator=(const Time& other) = default;
+
     friend std::ostream& operator<<(std::ostream& out, const Time& t) {
         out << t.m_val;
         return out;

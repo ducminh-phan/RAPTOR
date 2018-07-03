@@ -128,7 +128,6 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
     // Initialisation
     for (const auto& stop: m_timetable->stops()) {
-        earliest_arrival_time[stop.id] = {};
         labels[stop.id].emplace_back();
     }
     labels[source_id] = {departure_time};
@@ -277,6 +276,52 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
     marked_stops.insert(target_id);
     std::unordered_map<node_id_t, Time> tmp_hub_labels;
 
+    // Since each round of a forward query ends with scanning foot paths,
+    // we need to do a backward scanning of foot paths before entering the rounds
+    if (m_algo == "R") {
+        for (const auto& transfer: m_timetable->stops(target_id).backward_transfers) {
+            auto dest_id = transfer.dest;
+            auto transfer_time = transfer.time;
+
+            labels[dest_id].back() = std::max(
+                    labels[dest_id].back(),
+                    arrival_time - transfer_time
+            );
+
+            marked_stops.insert(dest_id);
+        }
+    }
+    if (m_algo == "HLR") {
+        for (const auto& kv: m_timetable->stops(target_id).in_hubs) {
+            auto walking_time = kv.first;
+            auto hub_id = kv.second;
+
+            if (walking_time > arrival_time) break;
+
+            auto tmp = arrival_time - walking_time;
+
+            tmp_hub_labels[hub_id] = tmp;
+
+            if (m_timetable->inverse_out_hubs().count(hub_id)) {
+                for (const auto& _kv: m_timetable->inverse_out_hubs().at(hub_id)) {
+                    auto _walking_time = _kv.first;
+                    auto stop_id = _kv.second;
+
+                    auto _tmp = tmp - _walking_time;
+
+                    if (_walking_time + walking_time > arrival_time) break;
+
+                    if (!labels[stop_id].back()) {
+                        labels[stop_id].back() = Time::neg_inf;
+                    }
+
+                    labels[stop_id].back() = std::max(labels[stop_id].back(), _tmp);
+                    marked_stops.insert(stop_id);
+                }
+            }
+        }
+    }
+
     uint16_t round {1};
     while (true) {
         // First stage
@@ -294,7 +339,7 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
             auto& route = m_timetable->routes(route_id);
 
             trip_id_t t = NULL_TRIP;
-            int stop_idx = route.stop_positions.at(stop_id).front();
+            int stop_idx = route.stop_positions.at(stop_id).back();
 
             // Iterate over the stops of the route beginning with stop_id in the reverse order
             for (int i = stop_idx; i >= 0; --i) {
@@ -362,6 +407,10 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
                     // at the target, there is no need to propagate to the next hubs
                     if (tmp < latest_departure_time[target_id]) break;
 
+                    if (!tmp_hub_labels[hub_id]) {
+                        tmp_hub_labels[hub_id] = Time::neg_inf;
+                    }
+
                     if (tmp > tmp_hub_labels[hub_id]) {
                         tmp_hub_labels[hub_id] = tmp;
                         improved_hubs.insert(hub_id);
@@ -381,6 +430,10 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
                         if (tmp < latest_departure_time[target_id]) break;
 
                         labels[stop_id].back() = std::max(labels[stop_id].back(), tmp);
+
+                        if (!latest_departure_time[stop_id]) {
+                            latest_departure_time[stop_id] = Time::neg_inf;
+                        }
 
                         if (labels[stop_id].back() > latest_departure_time[stop_id]) {
                             marked_stops.insert(stop_id);
@@ -433,6 +486,7 @@ std::vector<std::pair<Time, Time>> Raptor::profile_query(const node_id_t& source
     if (m_algo == "HLR") {
         auto walking_time = m_timetable->walking_time(source_id, target_id);
         std::vector<std::pair<Time, Time>> non_dominated_entries;
+        non_dominated_entries.emplace_back(0, walking_time);
 
         for (const auto& pair: dep_arr_pairs) {
             if (pair.second - pair.first < walking_time) {

@@ -213,7 +213,7 @@ Time Timetable::walking_time(const node_id_t& source_id, const node_id_t& target
         auto walking_time = kv.first;
         auto hub_id = kv.second;
 
-        tmp_hub_labels[hub_id] = std::min(tmp_hub_labels[hub_id], walking_time);
+        tmp_hub_labels[hub_id] = walking_time;
     }
 
     // Propagate the time from the hubs to the target
