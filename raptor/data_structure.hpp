@@ -37,7 +37,7 @@ public:
 
     explicit Time(value_type val) : m_val {val} {}
 
-    const value_type& val() { return m_val; }
+    const value_type& val() const { return m_val; }
 
     friend Time operator+(const Time& t1, const Time& t2) {
         // Make sure ∞ + c = ∞

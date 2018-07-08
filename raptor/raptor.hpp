@@ -25,7 +25,7 @@ private:
 
     route_stop_queue_t make_queue(std::set<node_id_t>& marked_stops, const bool& backward = false);
 
-    trip_id_t earliest_trip(const uint16_t& round, const labels_t& labels,
+    trip_id_t earliest_trip(const uint16_t& round, const Time& t,
                             const route_id_t& route_id, const node_id_t& stop_id,
                             const bool& backward = false);
 

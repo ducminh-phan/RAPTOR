@@ -62,11 +62,10 @@ route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops, const b
 // Find the earliest trip in route r that one can catch at stop s in round k,
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s),
 // or the latest trip t such that t_arr(t, s) <= t_(k-1) (s) if the query is backward
-trip_id_t Raptor::earliest_trip(const uint16_t& round, const labels_t& labels,
+trip_id_t Raptor::earliest_trip(const uint16_t& round, const Time& t,
                                 const route_id_t& route_id, const node_id_t& stop_id,
                                 const bool& backward) {
     static std::unordered_map<cache_key_t, trip_id_t, cache_key_hash> cache;
-    Time t = labels.at(stop_id)[round - 1];
 
     auto* prof_c = new Profiler {"cached"};
 
@@ -122,32 +121,29 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const labels_t& labels,
 
 
 std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& target_id, const Time& departure_time) {
-    labels_t labels;
+    std::vector<Time> target_labels;
     std::set<node_id_t> marked_stops;
+    std::unordered_map<node_id_t, Time> prev_earliest_arrival_time;
     std::unordered_map<node_id_t, Time> earliest_arrival_time;
 
     // Initialisation
-    for (const auto& stop: m_timetable->stops()) {
-        labels[stop.id].emplace_back();
-    }
-    labels[source_id] = {departure_time};
+    earliest_arrival_time[source_id] = {departure_time};
+
     marked_stops.insert(source_id);
     std::unordered_map<node_id_t, Time> tmp_hub_labels;
 
     if (m_algo == "HLR") {
         auto arrival_time = departure_time + m_timetable->walking_time(source_id, target_id);
 
-        labels[target_id].back() = arrival_time;
         earliest_arrival_time[target_id] = arrival_time;
     }
 
+    target_labels.push_back(earliest_arrival_time[target_id]);
+
     uint16_t round {1};
     while (true) {
-        // First stage, set an upper bound on the earliest arrival time at every stop
-        // by copying the arrival time from the previous round
-        for (const auto& stop: m_timetable->stops()) {
-            labels[stop.id].emplace_back(labels[stop.id].back());
-        }
+        // First stage, copy the earliest arrival times to the previous round
+        prev_earliest_arrival_time = earliest_arrival_time;
 
         // Second stage
         auto queue = make_queue(marked_stops);
@@ -177,20 +173,20 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
                     // Local and target pruning
                     if (arr < std::min(earliest_arrival_time[p_i], earliest_arrival_time[target_id])) {
-                        labels[p_i][round] = arr;
                         earliest_arrival_time[p_i] = arr;
                         marked_stops.insert(p_i);
                     }
                 }
 
                 // Check if we can catch an earlier trip at p_i
-                if (labels[p_i][round - 1] <= dep) {
-                    t = earliest_trip(round, labels, route_id, p_i);
+                if (prev_earliest_arrival_time[p_i] <= dep) {
+                    t = earliest_trip(round, prev_earliest_arrival_time[p_i], route_id, p_i);
                 }
             }
         }
 
         ++round;
+        target_labels.push_back(earliest_arrival_time[target_id]);
         if (marked_stops.empty()) break;
 
         // Third stage, look at footpaths
@@ -201,10 +197,11 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
                     auto dest_id = transfer.dest;
                     auto transfer_time = transfer.time;
 
-                    labels[dest_id].back() = std::min(
-                            labels[dest_id].back(),
-                            labels[stop_id].back() + transfer_time
-                    );
+                    auto tmp = earliest_arrival_time[stop_id] + transfer_time;
+
+                    if (tmp < earliest_arrival_time[dest_id]) {
+                        earliest_arrival_time[dest_id] = tmp;
+                    }
 
                     marked_stops.insert(dest_id);
                 }
@@ -219,7 +216,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
                     auto walking_time = kv.first;
                     auto hub_id = kv.second;
 
-                    auto tmp = labels[stop_id].back() + walking_time;
+                    auto tmp = earliest_arrival_time[stop_id] + walking_time;
 
                     // Since we sort the links stop->out-hub in the increasing order of walking time,
                     // as soon as the arrival time propagated to a hub is after the earliest arrival time
@@ -244,20 +241,23 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
                         auto tmp = tmp_hub_labels[hub_id] + walking_time;
                         if (tmp > earliest_arrival_time[target_id]) break;
 
-                        labels[stop_id].back() = std::min(labels[stop_id].back(), tmp);
-
-                        if (labels[stop_id].back() < earliest_arrival_time[stop_id]) {
+                        if (tmp < earliest_arrival_time[stop_id]) {
+                            earliest_arrival_time[stop_id] = tmp;
                             marked_stops.insert(stop_id);
-                            earliest_arrival_time[stop_id] = labels[stop_id].back();
                         }
                     }
                 }
             }
         }
+
+        // The earliest arrival time at target_id could have been changed
+        // after scanning the footpaths, thus we need to update the labels
+        // of the target here
+        target_labels.back() = earliest_arrival_time[target_id];
     }
 
     Profiler::clear();
-    return labels[target_id];
+    return target_labels;
 }
 
 
@@ -366,7 +366,7 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
 
                 // Check if we can depart by a later trip at p_i
                 if (labels[p_i][round - 1] >= arr) {
-                    t = earliest_trip(round, labels, route_id, p_i, true);
+                    t = earliest_trip(round, labels[p_i][round - 1], route_id, p_i, true);
                 }
             }
         }
