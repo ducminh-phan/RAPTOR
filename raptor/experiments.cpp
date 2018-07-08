@@ -1,3 +1,4 @@
+#include <iomanip>
 #include <fstream>
 
 #include "experiments.hpp"
@@ -11,6 +12,8 @@ void write_results(const Results& results, const std::string& name, const std::s
 
     running_time_file << "running_time\n";
     arrival_times_file << "arrival_times\n";
+
+    running_time_file << std::fixed << std::setprecision(4);
 
     for (const auto& result: results) {
         running_time_file << result.running_time << '\n';
@@ -50,9 +53,12 @@ Queries Experiment::read_queries() {
 
 void Experiment::run(const std::string& algo, const std::string& type) const {
     Results res;
-    Raptor raptor {algo, m_timetable};
+    Raptor raptor {m_timetable, algo, type};
 
-    for (const auto& query: m_queries) {
+    res.resize(m_queries.size());
+    for (size_t i = 0; i < m_queries.size(); ++i) {
+        auto query = m_queries[i];
+
         Timer timer;
         std::vector<Time> arrival_times;
 
@@ -64,7 +70,9 @@ void Experiment::run(const std::string& algo, const std::string& type) const {
 
         double running_time = timer.elapsed();
 
-        res.emplace_back(query.rank, running_time, arrival_times);
+        res[i] = {query.rank, running_time, arrival_times};
+
+        std::cout << i << std::endl;
     }
 
     write_results(res, m_timetable->name(), algo);

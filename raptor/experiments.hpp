@@ -26,6 +26,8 @@ struct Result {
     double running_time;
     std::vector<Time> arrival_times;
 
+    Result() : rank {}, running_time {}, arrival_times {} {};
+
     Result(uint16_t r, double rt, std::vector<Time> a) : rank {r}, running_time {rt}, arrival_times {std::move(a)} {};
 };
 
