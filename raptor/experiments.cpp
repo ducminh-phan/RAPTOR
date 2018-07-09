@@ -76,4 +76,6 @@ void Experiment::run(const std::string& algo, const std::string& type) const {
     }
 
     write_results(res, m_timetable->name(), algo);
+
+    Profiler::report();
 }

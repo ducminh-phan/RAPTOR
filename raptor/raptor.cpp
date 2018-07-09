@@ -142,11 +142,17 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
     uint16_t round {1};
     while (true) {
+        auto* prof_1 = new Profiler {"stage 1"};
+
         // First stage, copy the earliest arrival times to the previous round
         prev_earliest_arrival_time = earliest_arrival_time;
 
+        delete prof_1;
+
         // Second stage
         auto queue = make_queue(marked_stops);
+
+        auto* prof_2 = new Profiler {"traverse routes"};
 
         // Traverse each route
         for (const auto& route_stop: queue) {
@@ -185,11 +191,15 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
             }
         }
 
+        delete prof_2;
+
         ++round;
         target_labels.push_back(earliest_arrival_time[target_id]);
         if (marked_stops.empty()) break;
 
         // Third stage, look at footpaths
+
+        auto* prof_3 = new Profiler {"foot paths"};
 
         if (m_algo == "R") {
             for (const auto& stop_id: marked_stops) {
@@ -259,9 +269,10 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
         // after scanning the footpaths, thus we need to update the labels
         // of the target here
         target_labels.back() = earliest_arrival_time[target_id];
+
+        delete prof_3;
     }
 
-    Profiler::clear();
     return target_labels;
 }
 
