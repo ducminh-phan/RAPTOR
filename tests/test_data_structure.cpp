@@ -2,12 +2,31 @@
 #include "data_structure.hpp"
 
 
-// The columns in each stop_times table are ordered
-bool test_stop_times_ordered(const Timetable& timetable) {
+extern const std::string g_location;
+
+
+// The rows in each stop_times table are ordered
+bool test_stop_times_rows_ordered(const Timetable& timetable) {
     for (const auto& route: timetable.routes()) {
         for (size_t j = 0; j < route.stops.size() - 1; ++j) {
             for (size_t i = 0; i < route.trips.size(); ++i) {
                 if (route.stop_times[i][j].arr > route.stop_times[i][j + 1].arr) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+
+// The columns in each stop_times table are ordered
+bool test_stop_times_columns_ordered(const Timetable& timetable) {
+    for (const auto& route: timetable.routes()) {
+        for (size_t i = 0; i < route.trips.size() - 1; ++i) {
+            for (size_t j = 0; j < route.stops.size(); ++j) {
+                if (route.stop_times[i][j].arr > route.stop_times[i + 1][j].arr) {
                     return false;
                 }
             }
@@ -41,10 +60,12 @@ bool test_unique_pattern(const Timetable& timetable) {
 
 
 TEST_CASE("Test the sanity of the dataset and parser", "") {
-    Timetable timetable {"Paris", "R"};
+    Timetable timetable {g_location, "R"};
     timetable.summary();
 
-    REQUIRE(test_stop_times_ordered(timetable));
+    REQUIRE(test_stop_times_rows_ordered(timetable));
+
+    REQUIRE(test_stop_times_columns_ordered(timetable));
 
     REQUIRE(test_unique_pattern(timetable));
 }
