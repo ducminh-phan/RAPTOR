@@ -61,6 +61,8 @@ public:
 
     friend bool operator<=(const Time& t1, const Time& t2) { return !(t1 > t2); }
 
+    friend bool operator==(const Time& t1, const Time& t2) { return t1.m_val == t2.m_val; }
+
     explicit operator bool() const { return m_val < inf; }
 
     Time& operator=(const value_type val) {
@@ -86,6 +88,10 @@ struct Transfer {
     Time time;
 
     Transfer(node_id_t dest, Time::value_type time) : dest {dest}, time {time} {};
+
+    friend bool operator<(const Transfer& t1, const Transfer& t2) {
+        return (t1.time < t2.time) || ((t1.time == t2.time) && (t1.dest < t2.dest));
+    }
 };
 
 

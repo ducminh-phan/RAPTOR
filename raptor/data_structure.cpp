@@ -80,6 +80,10 @@ void Timetable::parse_transfers() {
             m_stops[to].backward_transfers.emplace_back(from, time);
         }
     }
+
+    for (auto& stop: m_stops) {
+        std::sort(stop.transfers.begin(), stop.transfers.end());
+    }
 }
 
 
