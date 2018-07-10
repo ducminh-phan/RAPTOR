@@ -62,10 +62,9 @@ route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops, const b
 // Find the earliest trip in route r that one can catch at stop s in round k,
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s),
 // or the latest trip t such that t_arr(t, s) <= t_(k-1) (s) if the query is backward
-trip_id_t Raptor::earliest_trip(const uint16_t& round, const Time& t,
-                                const route_id_t& route_id, const node_id_t& stop_id,
-                                const bool& backward) {
-    static std::unordered_map<cache_key_t, trip_id_t, cache_key_hash> cache;
+trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_idx,
+                                const Time& t, const bool& backward) {
+    static std::unordered_map<cache_key_t, trip_id_t, std::hash<cache_key_t>> cache;
 
     auto* prof_c = new Profiler {"cached"};
 
@@ -73,7 +72,7 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const Time& t,
     // This speeds up the function since the label could be the same in several rounds,
     // so that we do not need to find the earliest trip again in another round if the
     // label remains the same.
-    cache_key_t key = std::make_tuple(t.val(), route_id, stop_id, backward);
+    cache_key_t key = std::make_tuple(route_id, stop_idx, t.val(), backward);
     auto search = cache.find(key);
     if (search != cache.end()) {
         delete prof_c;
@@ -86,32 +85,24 @@ trip_id_t Raptor::earliest_trip(const uint16_t& round, const Time& t,
     const auto& route = m_timetable->routes(route_id);
 
     const auto& stop_times = route.stop_times;
-    const auto& stop_idx = route.stop_positions.at(stop_id);
     trip_id_t earliest_trip = NULL_TRIP;
-    Time earliest_time {backward ? Time::neg_inf : Time::inf};
 
     for (size_t j = 0; j < stop_times.size(); ++j) {
         size_t i = backward ? stop_times.size() - 1 - j : j;
 
         trip_id_t r = route.trips[i];
 
-        // Iterate over the appearances of the stop in the trip
-        for (const auto& idx: stop_idx) {
-            // The departure and arrival times of the current trip at stop_id
-            const Time& dep = stop_times.at(i).at(idx).dep;
-            const Time& arr = stop_times.at(i).at(idx).arr;
+        // The departure and arrival times of the current trip at stop_id
+        const Time& dep = stop_times.at(i).at(stop_idx).dep;
+        const Time& arr = stop_times.at(i).at(stop_idx).arr;
 
-            if (backward) {
-                if (arr <= t && arr > earliest_time) {
-                    earliest_trip = r;
-                    earliest_time = arr;
-                }
-            } else {
-                if (dep >= t && dep < earliest_time) {
-                    earliest_trip = r;
-                    earliest_time = dep;
-                }
-            }
+        if ((backward && (arr <= t)) || (!backward && (dep >= t))) {
+            // We are scanning the column corresponding to the stop from top to bottom,
+            // i.e., in the increasing order of time. Thus the first cell such that
+            // the departure time is later than t corresponds to the earliest trip
+            // we can catch at the stop.
+            earliest_trip = r;
+            break;
         }
     }
 
@@ -186,7 +177,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
                 // Check if we can catch an earlier trip at p_i
                 if (prev_earliest_arrival_time[p_i] <= dep) {
-                    t = earliest_trip(round, prev_earliest_arrival_time[p_i], route_id, p_i);
+                    t = earliest_trip(route_id, i, prev_earliest_arrival_time[p_i]);
                 }
             }
         }
@@ -382,7 +373,7 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
 
                 // Check if we can depart by a later trip at p_i
                 if (labels[p_i][round - 1] >= arr) {
-                    t = earliest_trip(round, labels[p_i][round - 1], route_id, p_i, true);
+                    t = earliest_trip(route_id, static_cast<const size_t>(i), labels[p_i][round - 1], true);
                 }
             }
         }
