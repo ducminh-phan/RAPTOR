@@ -131,8 +131,10 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
     target_labels.push_back(earliest_arrival_time[target_id]);
 
-    uint16_t round {1};
+    uint16_t round {0};
     while (true) {
+        ++round;
+
         auto* prof_1 = new Profiler {"stage 1"};
 
         // First stage, copy the earliest arrival times to the previous round
@@ -184,11 +186,16 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
         delete prof_2;
 
-        ++round;
         target_labels.push_back(earliest_arrival_time[target_id]);
         if (marked_stops.empty()) break;
 
         // Third stage, look at footpaths
+
+        // In the first round, we need to consider also the transfers starting from the source,
+        // this was not considered in the original version of RAPTOR
+        if (round == 1) {
+            marked_stops.insert(source_id);
+        }
 
         auto* prof_3 = new Profiler {"foot paths"};
 
@@ -259,6 +266,15 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
                     }
                 }
             }
+        }
+
+        // After having scanned the transfers/foot paths, we remove source_id
+        // from the set of marked stops. Leaving it there would change nothing,
+        // as we already marked it in the initialisation step, and scanning the routes
+        // starting from source_id again is just a duplication of what was already done
+        // in the first round.
+        if (round == 1) {
+            marked_stops.erase(source_id);
         }
 
         // The earliest arrival time at target_id could have been changed
