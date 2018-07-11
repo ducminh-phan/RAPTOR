@@ -193,6 +193,8 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
         auto* prof_3 = new Profiler {"foot paths"};
 
         if (m_algo == "R") {
+            std::unordered_set<node_id_t> stops_to_mark;
+
             for (const auto& stop_id: marked_stops) {
                 for (const auto& transfer: m_timetable->stops(stop_id).transfers) {
                     auto dest_id = transfer.dest;
@@ -202,15 +204,18 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
                     if (tmp < earliest_arrival_time[dest_id]) {
                         earliest_arrival_time[dest_id] = tmp;
+                        stops_to_mark.insert(dest_id);
                     }
-
-                    marked_stops.insert(dest_id);
 
                     // Since the transfers are sorted in the increasing order of walking time,
                     // we can skip the scanning of the transfers as soon as the arrival time
                     // of the destination is later than that of the target
                     if (tmp > earliest_arrival_time[target_id]) break;
                 }
+            }
+
+            for (const auto& stop_id: stops_to_mark) {
+                marked_stops.insert(stop_id);
             }
         }
 
