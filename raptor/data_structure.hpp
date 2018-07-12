@@ -48,7 +48,7 @@ public:
     }
 
     friend Time operator-(const Time& t1, const Time& t2) {
-        if (t1.m_val <= t2.m_val) return Time(0);
+        if (t1.m_val < t2.m_val) return Time(neg_inf);
 
         return Time(t1.m_val - t2.m_val);
     }

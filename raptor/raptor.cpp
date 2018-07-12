@@ -123,10 +123,13 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
     marked_stops.insert(source_id);
     std::unordered_map<node_id_t, Time> tmp_hub_labels;
 
-    if (m_algo == "HLR") {
-        auto arrival_time = departure_time + m_timetable->walking_time(source_id, target_id);
+    // If walking is unlimited, we can have a pure walking journey from the source to the target.
+    // But in the case of profile queries, we need journeys to contain at least one trip, i.e.,
+    // direct walking from s to t is prohibited.
+    if (m_algo == "HLR" && m_type != "p") {
+        auto target_arrival_time = departure_time + m_timetable->walking_time(source_id, target_id);
 
-        earliest_arrival_time[target_id] = arrival_time;
+        earliest_arrival_time[target_id] = target_arrival_time;
     }
 
     target_labels.push_back(earliest_arrival_time[target_id]);
@@ -193,7 +196,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
         // In the first round, we need to consider also the transfers starting from the source,
         // this was not considered in the original version of RAPTOR
-        if (round == 1) {
+        if (round == 1 && m_type != "p") {
             marked_stops.insert(source_id);
         }
 
@@ -273,7 +276,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
         // as we already marked it in the initialisation step, and scanning the routes
         // starting from source_id again is just a duplication of what was already done
         // in the first round.
-        if (round == 1) {
+        if (round == 1 && m_type != "p") {
             marked_stops.erase(source_id);
         }
 
@@ -290,16 +293,15 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
 
 Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_id, const Time& arrival_time) {
-    labels_t labels;
     std::set<node_id_t> marked_stops;
+    std::unordered_map<node_id_t, Time> prev_latest_departure_time;
     std::unordered_map<node_id_t, Time> latest_departure_time;
 
     // Initialisation
     for (const auto& stop: m_timetable->stops()) {
-        latest_departure_time.emplace(stop.id, 0);
-        labels[stop.id].emplace_back(0);
+        latest_departure_time[stop.id] = Time::neg_inf;
     }
-    labels[target_id] = {arrival_time};
+
     latest_departure_time[target_id] = {arrival_time};
     marked_stops.insert(target_id);
     std::unordered_map<node_id_t, Time> tmp_hub_labels;
@@ -311,14 +313,13 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
             auto dest_id = transfer.dest;
             auto transfer_time = transfer.time;
 
-            labels[dest_id].back() = std::max(
-                    labels[dest_id].back(),
-                    arrival_time - transfer_time
-            );
-
-            marked_stops.insert(dest_id);
+            if (arrival_time >= transfer_time) {
+                latest_departure_time[dest_id] = arrival_time - transfer_time;
+                marked_stops.insert(dest_id);
+            }
         }
     }
+
     if (m_algo == "HLR") {
         for (const auto& kv: m_timetable->stops(target_id).in_hubs) {
             auto walking_time = kv.first;
@@ -327,8 +328,6 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
             if (walking_time > arrival_time) break;
 
             auto tmp = arrival_time - walking_time;
-
-            tmp_hub_labels[hub_id] = tmp;
 
             if (m_timetable->inverse_out_hubs().count(hub_id)) {
                 for (const auto& _kv: m_timetable->inverse_out_hubs().at(hub_id)) {
@@ -339,22 +338,32 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
 
                     if (_walking_time + walking_time > arrival_time) break;
 
-                    if (!labels[stop_id].back()) {
-                        labels[stop_id].back() = Time::neg_inf;
+                    if (_tmp > latest_departure_time[stop_id]) {
+                        latest_departure_time[stop_id] = _tmp;
+                        marked_stops.insert(stop_id);
                     }
-
-                    labels[stop_id].back() = std::max(labels[stop_id].back(), _tmp);
-                    marked_stops.insert(stop_id);
                 }
             }
         }
+
+        // Make the labels of all the hubs -∞
+        for (const auto& kv: m_timetable->inverse_in_hubs()) {
+            auto hub_id = kv.first;
+            tmp_hub_labels[hub_id] = Time::neg_inf;
+        }
+        for (const auto& kv: m_timetable->inverse_out_hubs()) {
+            auto hub_id = kv.first;
+            tmp_hub_labels[hub_id] = Time::neg_inf;
+        }
     }
 
-    uint16_t round {1};
+    uint16_t round {0};
     while (true) {
+        ++round;
+
         // First stage
-        for (const auto& stop: m_timetable->stops()) {
-            labels[stop.id].emplace_back(labels[stop.id].back());
+        for (const auto& s: marked_stops) {
+            prev_latest_departure_time[s] = latest_departure_time[s];
         }
 
         // Second stage
@@ -386,37 +395,41 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
 
                     // Local and target pruning
                     if (dep > std::max(latest_departure_time[p_i], latest_departure_time[source_id])) {
-                        labels[p_i][round] = dep;
                         latest_departure_time[p_i] = dep;
                         marked_stops.insert(p_i);
                     }
                 }
 
                 // Check if we can depart by a later trip at p_i
-                if (labels[p_i][round - 1] >= arr) {
-                    t = earliest_trip(route_id, static_cast<const size_t>(i), labels[p_i][round - 1], true);
+                if (prev_latest_departure_time[p_i] >= arr) {
+                    t = earliest_trip(route_id, static_cast<size_t>(i), latest_departure_time[p_i], true);
                 }
             }
         }
 
-        ++round;
         if (marked_stops.empty()) break;
 
         // Third stage, look at footpaths
 
         if (m_algo == "R") {
+            std::unordered_set<node_id_t> stops_to_mark;
+
             for (const auto& stop_id: marked_stops) {
                 for (const auto& transfer: m_timetable->stops(stop_id).backward_transfers) {
                     auto dest_id = transfer.dest;
                     auto transfer_time = transfer.time;
 
-                    labels[dest_id].back() = std::max(
-                            labels[dest_id].back(),
-                            labels[stop_id].back() - transfer_time
-                    );
+                    auto tmp = latest_departure_time[stop_id] - transfer_time;
 
-                    marked_stops.insert(dest_id);
+                    if (tmp > latest_departure_time[dest_id]) {
+                        latest_departure_time[dest_id] = tmp;
+                        stops_to_mark.insert(dest_id);
+                    }
                 }
+            }
+
+            for (const auto& stop_id: stops_to_mark) {
+                marked_stops.insert(stop_id);
             }
         }
 
@@ -428,16 +441,12 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
                     auto walking_time = kv.first;
                     auto hub_id = kv.second;
 
-                    auto tmp = labels[stop_id].back() - walking_time;
+                    auto tmp = latest_departure_time[stop_id] - walking_time;
 
                     // Since we sort the links stop->out-hub in the increasing order of walking time,
                     // as soon as the arrival time propagated to a hub is after the earliest arrival time
                     // at the target, there is no need to propagate to the next hubs
-                    if (tmp < latest_departure_time[target_id]) break;
-
-                    if (!tmp_hub_labels[hub_id]) {
-                        tmp_hub_labels[hub_id] = Time::neg_inf;
-                    }
+                    if (tmp < latest_departure_time[source_id]) break;
 
                     if (tmp > tmp_hub_labels[hub_id]) {
                         tmp_hub_labels[hub_id] = tmp;
@@ -455,17 +464,11 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
                         auto stop_id = kv.second;
 
                         auto tmp = tmp_hub_labels[hub_id] - walking_time;
-                        if (tmp < latest_departure_time[target_id]) break;
+                        if (tmp < latest_departure_time[source_id]) break;
 
-                        labels[stop_id].back() = std::max(labels[stop_id].back(), tmp);
-
-                        if (!latest_departure_time[stop_id]) {
-                            latest_departure_time[stop_id] = Time::neg_inf;
-                        }
-
-                        if (labels[stop_id].back() > latest_departure_time[stop_id]) {
+                        if (tmp > latest_departure_time[stop_id]) {
+                            latest_departure_time[stop_id] = tmp;
                             marked_stops.insert(stop_id);
-                            latest_departure_time[stop_id] = labels[stop_id].back();
                         }
                     }
                 }
@@ -473,8 +476,7 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
         }
     }
 
-    Profiler::clear();
-    return labels[source_id].back();
+    return latest_departure_time[source_id];
 }
 
 
@@ -495,6 +497,12 @@ std::vector<std::pair<Time, Time>> Raptor::profile_query(const node_id_t& source
             arrival_times_queue.insert(t);
         }
 
+        // The result of the first forward query might be empty, which means we cannot
+        // travel from the source to the target with the current timetable. In that case,
+        // the following unnecessary computation will lead to undetermined behaviour.
+        // Thus we need to break here if arrival_times_queue is empty.
+        if (arrival_times_queue.empty()) break;
+
         // Pick the earliest arrival time from the queue and perform a backward query
         auto begin = arrival_times_queue.begin();
         arr = *begin;
@@ -507,7 +515,8 @@ std::vector<std::pair<Time, Time>> Raptor::profile_query(const node_id_t& source
         // Change t_dep -> t_dep + ε to continue the forward search
         dep = dep + epsilon;
 
-        if (arrival_times_queue.empty()) break;
+        // We compute profile queries in the range of 24 hours only
+        if (dep > Time(86400) || arrival_times_queue.empty()) break;
     }
 
     // We need to remove the entries dominated by a pure walking journey
