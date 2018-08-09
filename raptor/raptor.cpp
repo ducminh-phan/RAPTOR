@@ -119,6 +119,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
     // Initialisation
     earliest_arrival_time[source_id] = {departure_time};
+    prev_earliest_arrival_time[source_id] = {departure_time};
 
     marked_stops.insert(source_id);
     std::unordered_map<node_id_t, Time> tmp_hub_labels;
@@ -141,7 +142,9 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
         auto* prof_1 = new Profiler {"stage 1"};
 
         // First stage, copy the earliest arrival times to the previous round
-        prev_earliest_arrival_time = earliest_arrival_time;
+        for (const auto& s: marked_stops) {
+            prev_earliest_arrival_time[s] = earliest_arrival_time[s];
+        }
 
         delete prof_1;
 
