@@ -26,6 +26,8 @@ struct Result {
     double running_time;
     std::vector<Time> arrival_times;
 
+    Result() : rank {}, running_time {}, arrival_times {} {};
+
     Result(uint16_t r, double rt, std::vector<Time> a) : rank {r}, running_time {rt}, arrival_times {std::move(a)} {};
 };
 
@@ -47,7 +49,7 @@ public:
     explicit Experiment(const Timetable* timetable) :
             m_timetable {timetable}, m_queries {read_queries()} {}
 
-    void run(const std::string& algo) const;
+    void run(const std::string& algo, const std::string& type) const;
 };
 
 #endif // EXPERIMENTS_HPP

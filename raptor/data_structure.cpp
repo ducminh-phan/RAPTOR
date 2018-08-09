@@ -5,7 +5,9 @@
 #include "csv_reader.hpp"
 #include "gzstream.h"
 
+
 extern const trip_id_t NULL_TRIP = -1;
+
 
 void Timetable::parse_data() {
     Timer timer;
@@ -21,6 +23,7 @@ void Timetable::parse_data() {
     std::cout << "Complete parsing the data." << std::endl;
     std::cout << "Time elapsed: " << timer.elapsed() << timer.unit() << std::endl;
 }
+
 
 void Timetable::parse_trips() {
     auto trips_file = read_dataset_file<igzstream>(m_path + "trips.csv.gz");
@@ -44,6 +47,7 @@ void Timetable::parse_trips() {
     }
 }
 
+
 void Timetable::parse_stop_routes() {
     auto stop_routes_file = read_dataset_file<igzstream>(m_path + "stop_routes.csv.gz");
 
@@ -62,6 +66,7 @@ void Timetable::parse_stop_routes() {
     }
 }
 
+
 void Timetable::parse_transfers() {
     auto transfers_file = read_dataset_file<igzstream>(m_path + "transfers.csv.gz");
 
@@ -72,9 +77,15 @@ void Timetable::parse_transfers() {
 
         if (m_stops[from].is_valid() && m_stops[to].is_valid()) {
             m_stops[from].transfers.emplace_back(to, time);
+            m_stops[to].backward_transfers.emplace_back(from, time);
         }
     }
+
+    for (auto& stop: m_stops) {
+        std::sort(stop.transfers.begin(), stop.transfers.end());
+    }
 }
+
 
 void Timetable::parse_hubs() {
     auto in_hub_file = read_dataset_file<igzstream>(m_path + "in_hubs.gr.gz");
@@ -95,8 +106,10 @@ void Timetable::parse_hubs() {
         auto stop_id = static_cast<node_id_t>((*iter)[0]);
         auto node_id = static_cast<node_id_t>((*iter)[1]);
         auto distance = static_cast<distance_t>((*iter)[2]);
+        auto time = distance_to_time(distance);
 
-        m_stops[stop_id].out_hubs.emplace_back(distance_to_time(distance), node_id);
+        m_stops[stop_id].out_hubs.emplace_back(time, node_id);
+        m_inverse_out_hubs[node_id].emplace_back(time, stop_id);
     }
 
     for (auto& stop: m_stops) {
@@ -107,7 +120,12 @@ void Timetable::parse_hubs() {
     for (auto& kv: m_inverse_in_hubs) {
         std::sort(kv.second.begin(), kv.second.end());
     }
+
+    for (auto& kv: m_inverse_out_hubs) {
+        std::sort(kv.second.begin(), kv.second.end());
+    }
 }
+
 
 void Timetable::parse_stop_times() {
     auto stop_times_file = read_dataset_file<igzstream>(m_path + "stop_times.csv.gz");
@@ -136,6 +154,7 @@ void Timetable::parse_stop_times() {
         }
     }
 }
+
 
 void Timetable::summary() const {
     std::cout << std::string(80, '-') << std::endl;
@@ -185,6 +204,36 @@ void Timetable::summary() const {
 
     std::cout << std::string(80, '-') << std::endl;
 }
+
+
+Time Timetable::walking_time(const node_id_t& source_id, const node_id_t& target_id) const {
+    if (m_algo != "HLR") throw NotImplemented();
+
+    std::unordered_map<node_id_t, Time> tmp_hub_labels;
+    Time arrival_time {};
+
+    // Find the earliest time to get to the out hubs of the source
+    for (const auto& kv: m_stops[source_id].out_hubs) {
+        auto walking_time = kv.first;
+        auto hub_id = kv.second;
+
+        tmp_hub_labels[hub_id] = walking_time;
+    }
+
+    // Propagate the time from the hubs to the target
+    for (const auto& kv: m_stops[target_id].in_hubs) {
+        auto walking_time = kv.first;
+        auto hub_id = kv.second;
+
+        arrival_time = std::min(
+                arrival_time,
+                tmp_hub_labels[hub_id] + walking_time
+        );
+    }
+
+    return arrival_time;
+}
+
 
 Time distance_to_time(const distance_t& d) {
     static const double v {4.0};  // km/h

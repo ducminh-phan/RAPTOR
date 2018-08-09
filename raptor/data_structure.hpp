@@ -13,6 +13,7 @@
 
 #include "utilities.hpp"
 
+
 using node_id_t = uint32_t;
 using trip_id_t = int32_t;
 using route_id_t = uint16_t;
@@ -21,19 +22,22 @@ using distance_t = uint32_t;
 
 extern const trip_id_t NULL_TRIP;
 
+
 class Time {
 public:
-    using value_type = uint32_t;
+    using value_type = int32_t;
 private:
     value_type m_val;
 public:
     const static value_type inf = std::numeric_limits<value_type>::max();
 
+    const static value_type neg_inf = std::numeric_limits<value_type>::min();
+
     Time() : m_val {inf} {};
 
-    explicit Time(value_type val_) : m_val {val_} {}
+    explicit Time(value_type val) : m_val {val} {}
 
-    const value_type& val() { return m_val; }
+    const value_type& val() const { return m_val; }
 
     friend Time operator+(const Time& t1, const Time& t2) {
         // Make sure ∞ + c = ∞
@@ -41,6 +45,12 @@ public:
 
         // m_val is small compared to inf, so we don't have to worry about overflow here
         return Time(t1.m_val + t2.m_val);
+    }
+
+    friend Time operator-(const Time& t1, const Time& t2) {
+        if (t1.m_val < t2.m_val) return Time(neg_inf);
+
+        return Time(t1.m_val - t2.m_val);
     }
 
     friend bool operator<(const Time& t1, const Time& t2) { return t1.m_val < t2.m_val; }
@@ -51,31 +61,51 @@ public:
 
     friend bool operator<=(const Time& t1, const Time& t2) { return !(t1 > t2); }
 
+    friend bool operator==(const Time& t1, const Time& t2) { return t1.m_val == t2.m_val; }
+
+    explicit operator bool() const { return m_val < inf; }
+
+    Time& operator=(const value_type val) {
+        this->m_val = val;
+        return *this;
+    }
+
+    Time& operator=(const Time& other) = default;
+
     friend std::ostream& operator<<(std::ostream& out, const Time& t) {
         out << t.m_val;
         return out;
     }
 };
 
+
 using hubs_t = std::vector<std::pair<Time, node_id_t>>;
 using inverse_hubs_t = std::unordered_map<node_id_t, hubs_t>;
+
 
 struct Transfer {
     node_id_t dest;
     Time time;
 
     Transfer(node_id_t dest, Time::value_type time) : dest {dest}, time {time} {};
+
+    friend bool operator<(const Transfer& t1, const Transfer& t2) {
+        return (t1.time < t2.time) || ((t1.time == t2.time) && (t1.dest < t2.dest));
+    }
 };
+
 
 struct Stop {
     node_id_t id;
     std::vector<route_id_t> routes;
     std::vector<Transfer> transfers;
+    std::vector<Transfer> backward_transfers;
     hubs_t in_hubs;
     hubs_t out_hubs;
 
     bool is_valid() const { return !routes.empty(); }
 };
+
 
 struct StopTime {
     node_id_t stop_id;
@@ -85,6 +115,7 @@ struct StopTime {
     StopTime(node_id_t s, Time::value_type a, Time::value_type d) : stop_id {s}, arr {a}, dep {d} {};
 };
 
+
 struct Route {
     route_id_t id;
     std::vector<trip_id_t> trips;
@@ -92,6 +123,7 @@ struct Route {
     std::vector<std::vector<StopTime>> stop_times;
     std::unordered_map<node_id_t, std::vector<size_t>> stop_positions;
 };
+
 
 class Timetable {
 private:
@@ -102,6 +134,7 @@ private:
     std::vector<Stop> m_stops;
     std::unordered_map<trip_id_t, trip_pos_t> m_trip_positions;
     inverse_hubs_t m_inverse_in_hubs;
+    inverse_hubs_t m_inverse_out_hubs;
 
     void parse_data();
 
@@ -132,6 +165,10 @@ public:
 
     const inverse_hubs_t& inverse_in_hubs() const { return m_inverse_in_hubs; }
 
+    const inverse_hubs_t& inverse_out_hubs() const { return m_inverse_out_hubs; }
+
+    Time walking_time(const node_id_t& source_id, const node_id_t& target_id) const;
+
     Timetable(std::string name, std::string algo) : m_name {std::move(name)}, m_algo {std::move(algo)} {
         m_path = "../Public-Transit-Data/" + m_name + "/";
         parse_data();
@@ -139,6 +176,7 @@ public:
 
     void summary() const;
 };
+
 
 Time distance_to_time(const distance_t& d);
 
