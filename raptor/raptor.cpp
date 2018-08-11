@@ -91,20 +91,41 @@ trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_i
     const auto& stop_times = route.stop_times;
     trip_id_t earliest_trip = NULL_TRIP;
 
-    for (size_t j = 0; j < stop_times.size(); ++j) {
-        size_t i = backward ? stop_times.size() - 1 - j : j;
+    if (!backward) {
+        auto first = stop_times.begin();
+        size_t count = stop_times.size();
+        size_t step;
+        while (count > 0) {
+            auto it = first;
+            step = count / 2;
+            std::advance(it, step);
 
+            const Time& dep = stop_times.at(static_cast<size_t>(it - stop_times.begin())).at(stop_idx).dep;
+            if (dep < t) {
+                first = ++it;
+                count -= step + 1;
+            } else {
+                count = step;
+            }
+        }
+
+        if (first == stop_times.end()) return NULL_TRIP;
+
+        return route.trips.at(static_cast<size_t>(first - stop_times.begin()));
+    }
+
+    for (size_t j = 0; j < stop_times.size(); ++j) {
+        size_t i = stop_times.size() - 1 - j;
         trip_id_t r = route.trips[i];
 
-        // The departure and arrival times of the current trip at stop_id
-        const Time& dep = stop_times.at(i).at(stop_idx).dep;
+        // The arrival time of the current trip at stop_id
         const Time& arr = stop_times.at(i).at(stop_idx).arr;
 
-        if ((backward && (arr <= t)) || (!backward && (dep >= t))) {
-            // We are scanning the column corresponding to the stop from top to bottom,
-            // i.e., in the increasing order of time. Thus the first cell such that
-            // the departure time is later than t corresponds to the earliest trip
-            // we can catch at the stop.
+        if (arr <= t) {
+            // We are scanning the column corresponding to the stop from bottom to top,
+            // i.e., in the decreasing order of time. Thus the first cell such that
+            // the arrival time is not later than t corresponds to the earliest trip
+            // we can catch at the stop in the backward direction.
             earliest_trip = r;
             break;
         }
