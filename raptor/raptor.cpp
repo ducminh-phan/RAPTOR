@@ -5,6 +5,10 @@
 
 #include "raptor.hpp"
 
+const node_id_t MAX_STOPS = 100000;
+const node_id_t MAX_NODES = 1000000;
+const trip_id_t MAX_TRIPS = 1000000;
+
 
 // Check if stop1 comes before/after stop2 in the route
 bool Raptor::check_stops_order(const route_id_t& route_id, const node_id_t& stop1, const node_id_t& stop2,
@@ -87,20 +91,41 @@ trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_i
     const auto& stop_times = route.stop_times;
     trip_id_t earliest_trip = NULL_TRIP;
 
-    for (size_t j = 0; j < stop_times.size(); ++j) {
-        size_t i = backward ? stop_times.size() - 1 - j : j;
+    if (!backward) {
+        auto first = stop_times.begin();
+        size_t count = stop_times.size();
+        size_t step;
+        while (count > 0) {
+            auto it = first;
+            step = count / 2;
+            std::advance(it, step);
 
+            const Time& dep = stop_times.at(static_cast<size_t>(it - stop_times.begin())).at(stop_idx).dep;
+            if (dep < t) {
+                first = ++it;
+                count -= step + 1;
+            } else {
+                count = step;
+            }
+        }
+
+        if (first == stop_times.end()) return NULL_TRIP;
+
+        return route.trips.at(static_cast<size_t>(first - stop_times.begin()));
+    }
+
+    for (size_t j = 0; j < stop_times.size(); ++j) {
+        size_t i = stop_times.size() - 1 - j;
         trip_id_t r = route.trips[i];
 
-        // The departure and arrival times of the current trip at stop_id
-        const Time& dep = stop_times.at(i).at(stop_idx).dep;
+        // The arrival time of the current trip at stop_id
         const Time& arr = stop_times.at(i).at(stop_idx).arr;
 
-        if ((backward && (arr <= t)) || (!backward && (dep >= t))) {
-            // We are scanning the column corresponding to the stop from top to bottom,
-            // i.e., in the increasing order of time. Thus the first cell such that
-            // the departure time is later than t corresponds to the earliest trip
-            // we can catch at the stop.
+        if (arr <= t) {
+            // We are scanning the column corresponding to the stop from bottom to top,
+            // i.e., in the decreasing order of time. Thus the first cell such that
+            // the arrival time is not later than t corresponds to the earliest trip
+            // we can catch at the stop in the backward direction.
             earliest_trip = r;
             break;
         }
@@ -114,15 +139,18 @@ trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_i
 std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& target_id, const Time& departure_time) {
     std::vector<Time> target_labels;
     std::set<node_id_t> marked_stops;
-    std::unordered_map<node_id_t, Time> prev_earliest_arrival_time;
-    std::unordered_map<node_id_t, Time> earliest_arrival_time;
+    std::vector<Time> prev_earliest_arrival_time;
+    std::vector<Time> earliest_arrival_time;
 
     // Initialisation
+    earliest_arrival_time.resize(MAX_STOPS);
+    prev_earliest_arrival_time.resize(MAX_STOPS);
     earliest_arrival_time[source_id] = {departure_time};
     prev_earliest_arrival_time[source_id] = {departure_time};
 
     marked_stops.insert(source_id);
-    std::unordered_map<node_id_t, Time> tmp_hub_labels;
+    std::vector<Time> tmp_hub_labels;
+    tmp_hub_labels.resize(MAX_NODES);
 
     // If walking is unlimited, we can have a pure walking journey from the source to the target.
     // But in the case of profile queries, we need journeys to contain at least one trip, i.e.,
@@ -297,8 +325,11 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
 Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_id, const Time& arrival_time) {
     std::set<node_id_t> marked_stops;
-    std::unordered_map<node_id_t, Time> prev_latest_departure_time;
-    std::unordered_map<node_id_t, Time> latest_departure_time;
+    std::vector<Time> prev_latest_departure_time;
+    std::vector<Time> latest_departure_time;
+
+    latest_departure_time.resize(MAX_STOPS);
+    prev_latest_departure_time.resize(MAX_STOPS);
 
     // Initialisation
     for (const auto& stop: m_timetable->stops()) {
@@ -306,8 +337,11 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
     }
 
     latest_departure_time[target_id] = {arrival_time};
+    prev_latest_departure_time[target_id] = {arrival_time};
+
     marked_stops.insert(target_id);
-    std::unordered_map<node_id_t, Time> tmp_hub_labels;
+    std::vector<Time> tmp_hub_labels;
+    tmp_hub_labels.resize(MAX_NODES);
 
     // Since each round of a forward query ends with scanning foot paths,
     // we need to do a backward scanning of foot paths before entering the rounds
