@@ -10,6 +10,7 @@
 
 using Node = uint32_t;
 using Distance = uint32_t;
+using route_id_t = uint16_t;
 extern const Distance infty;
 
 struct NodeLabel {
@@ -23,28 +24,37 @@ class GraphLabel {
 public:
     using label_t = std::unordered_map<Node, NodeLabel>;
 private:
-    std::string m_path;
-    label_t m_in_labels;
-    label_t m_out_labels;
+    std::string _path;
 
     void parse_hub_files();
+
+    void parse_weights();
 
     void sort(NodeLabel& node_labels);
 
     void sort();
 
 public:
-    explicit GraphLabel(const std::string& name) : m_path {"../Public-Transit-Data/" + name + "/"} {
+    label_t in_labels;
+    label_t out_labels;
+
+    std::vector<Node> stops;
+    std::vector<size_t> weights;
+    std::unordered_map<Node, size_t> stop_to_weight;
+
+    explicit GraphLabel(const std::string& name) : _path {"../Public-Transit-Data/" + name + "/"} {
         parse_hub_files();
+
+        parse_weights();
     };
 
     const Distance shortest_path_length(const Node& u, const Node& v) const;
 
     const std::vector<std::pair<Distance, Node>> single_source_shortest_path_length(const Node& source) const;
 
-    const label_t& in_labels() const { return m_in_labels; }
+    const std::vector<Node> sssp_sorted_stops(const Node& source) const;
 
-    const std::string& path() const { return m_path; }
+    const std::string& path() const { return _path; }
 };
 
 #endif // HUB_LABELLING_HPP

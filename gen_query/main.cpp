@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -10,9 +11,9 @@
 struct Query {
     Node source;
     Node target;
-    static const size_t time = 28800;
+    size_t time;
 
-    Query(const Node& s, const Node& t) : source {s}, target {t} {};
+    Query(const Node& s, const Node& t, const size_t& t_) : source {s}, target {t}, time {t_} {};
 };
 
 using queries_t = std::map<size_t, std::vector<Query>>;
@@ -29,28 +30,39 @@ queries_t gen_query(const GraphLabel& gr_label) {
 
     size_t count = 0;
     while (true) {
-        // Choose a random stop in the graph
+        // Choose a random stop in the graph with given weights
         Node source;
 
         // We need to select an unused source stop
         do {
-            auto kv = rand_element(gr_label.in_labels());
-            source = kv.first;
+            source = weighted_rand_element(gr_label.stops, gr_label.weights);
         } while (used_sources.count(source));
 
         used_sources.emplace(source);
         bool added = false;
 
-        auto shortest_path_lengths = gr_label.single_source_shortest_path_length(source);
+        auto shortest_path_lengths = gr_label.sssp_sorted_stops(source);
+
+        std::ofstream log {"../log"};
+        for (const auto& elem: shortest_path_lengths) {
+            log << elem << '\n';
+        }
+
         auto current_rank = static_cast<size_t>(std::floor(std::log2(shortest_path_lengths.size())));
         max_rank = std::max(max_rank, current_rank);
 
         for (size_t rank = min_rank; rank <= current_rank; ++rank) {
             // Choose a random node so that its index is between 2^r and 2^(r+1)
-            auto target = rand_element(shortest_path_lengths, 1u << rank, 2u << rank).second;
+            auto first = shortest_path_lengths.begin() + (1u << rank);
+            auto last = shortest_path_lengths.begin() +
+                        std::min(static_cast<size_t>(2u << rank), shortest_path_lengths.size());
+
+            auto target = weighted_rand_element<Node>(first, last, gr_label.stop_to_weight);
+
+            auto time = rand_int<size_t>(0, 86400);
 
             if (queries[rank].size() < max_query_size) {
-                queries[rank].emplace_back(source, target);
+                queries[rank].emplace_back(source, target, time);
                 added = true;
                 ++count;
             }
@@ -100,7 +112,7 @@ void write_queries(const queries_t& queries, const std::string& file_path) {
 }
 
 int main(int argc, char* argv[]) {
-    GraphLabel gr_label {argv[1]};
+    const GraphLabel gr_label {argv[1]};
 
     auto queries = gen_query(gr_label);
 
