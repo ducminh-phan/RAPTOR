@@ -6,9 +6,11 @@
 #include "csv_reader.hpp"
 
 
-void write_results(const Results& results, const std::string& name, const std::string& algo) {
-    std::ofstream running_time_file {"../" + name + "_" + algo + "_running_time.csv"};
-    std::ofstream arrival_times_file {"../" + name + "_" + algo + "_arrival_times.csv"};
+void write_results(const Results& results) {
+    std::string algo_str = use_hl ? "HLR" : "R";
+
+    std::ofstream running_time_file {"../" + name + "_" + algo_str + "_running_time.csv"};
+    std::ofstream arrival_times_file {"../" + name + "_" + algo_str + "_arrival_times.csv"};
 
     running_time_file << "running_time\n";
     arrival_times_file << "arrival_times\n";
@@ -36,7 +38,8 @@ void write_results(const Results& results, const std::string& name, const std::s
 
 Queries Experiment::read_queries() {
     Queries queries;
-    auto queries_file = read_dataset_file<std::ifstream>(m_timetable->path() + "queries.csv");
+    std::string rank_str = ranked ? "rank_" : "";
+    auto queries_file = read_dataset_file<std::ifstream>(m_timetable->path + rank_str + "queries.csv");
 
     for (CSVIterator<uint32_t> iter {queries_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto r = static_cast<uint16_t>((*iter)[0]);
@@ -51,9 +54,9 @@ Queries Experiment::read_queries() {
 }
 
 
-void Experiment::run(const std::string& algo, const std::string& type) const {
+void Experiment::run() const {
     Results res;
-    Raptor raptor {m_timetable, algo, type};
+    Raptor raptor {m_timetable};
 
     res.resize(m_queries.size());
     for (size_t i = 0; i < m_queries.size(); ++i) {
@@ -62,7 +65,7 @@ void Experiment::run(const std::string& algo, const std::string& type) const {
         Timer timer;
         std::vector<Time> arrival_times;
 
-        if (type == "n") {
+        if (!profile) {
             arrival_times = raptor.query(query.source_id, query.target_id, query.dep);
         } else {
             raptor.profile_query(query.source_id, query.target_id);
@@ -75,7 +78,7 @@ void Experiment::run(const std::string& algo, const std::string& type) const {
         std::cout << i << std::endl;
     }
 
-    write_results(res, m_timetable->name(), algo);
+    write_results(res);
 
     Profiler::report();
 }

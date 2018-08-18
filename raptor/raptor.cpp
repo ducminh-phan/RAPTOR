@@ -7,7 +7,6 @@
 
 const node_id_t MAX_STOPS = 100000;
 const node_id_t MAX_NODES = 1000000;
-const trip_id_t MAX_TRIPS = 1000000;
 
 
 // Check if stop1 comes before/after stop2 in the route
@@ -155,7 +154,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
     // If walking is unlimited, we can have a pure walking journey from the source to the target.
     // But in the case of profile queries, we need journeys to contain at least one trip, i.e.,
     // direct walking from s to t is prohibited.
-    if (m_algo == "HLR" && m_type != "p") {
+    if (use_hl && !profile) {
         auto target_arrival_time = departure_time + m_timetable->walking_time(source_id, target_id);
 
         earliest_arrival_time[target_id] = target_arrival_time;
@@ -227,13 +226,13 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
         // In the first round, we need to consider also the transfers starting from the source,
         // this was not considered in the original version of RAPTOR
-        if (round == 1 && m_type != "p") {
+        if (round == 1 && !profile) {
             marked_stops.insert(source_id);
         }
 
         auto* prof_3 = new Profiler {"foot paths"};
 
-        if (m_algo == "R") {
+        if (!use_hl) {
             std::unordered_set<node_id_t> stops_to_mark;
 
             for (const auto& stop_id: marked_stops) {
@@ -258,9 +257,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
             for (const auto& stop_id: stops_to_mark) {
                 marked_stops.insert(stop_id);
             }
-        }
-
-        if (m_algo == "HLR") {
+        } else {
             std::unordered_set<node_id_t> improved_hubs;
 
             for (const auto& stop_id: marked_stops) {
@@ -307,7 +304,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
         // as we already marked it in the initialisation step, and scanning the routes
         // starting from source_id again is just a duplication of what was already done
         // in the first round.
-        if (round == 1 && m_type != "p") {
+        if (round == 1 && !profile) {
             marked_stops.erase(source_id);
         }
 
@@ -345,7 +342,7 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
 
     // Since each round of a forward query ends with scanning foot paths,
     // we need to do a backward scanning of foot paths before entering the rounds
-    if (m_algo == "R") {
+    if (!use_hl) {
         for (const auto& transfer: m_timetable->stops(target_id).backward_transfers) {
             auto dest_id = transfer.dest;
             auto transfer_time = transfer.time;
@@ -355,9 +352,7 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
                 marked_stops.insert(dest_id);
             }
         }
-    }
-
-    if (m_algo == "HLR") {
+    } else {
         for (const auto& kv: m_timetable->stops(target_id).in_hubs) {
             auto walking_time = kv.first;
             auto hub_id = kv.second;
@@ -448,7 +443,7 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
 
         // Third stage, look at footpaths
 
-        if (m_algo == "R") {
+        if (!use_hl) {
             std::unordered_set<node_id_t> stops_to_mark;
 
             for (const auto& stop_id: marked_stops) {
@@ -468,9 +463,7 @@ Time Raptor::backward_query(const node_id_t& source_id, const node_id_t& target_
             for (const auto& stop_id: stops_to_mark) {
                 marked_stops.insert(stop_id);
             }
-        }
-
-        if (m_algo == "HLR") {
+        } else {
             std::unordered_set<node_id_t> improved_hubs;
 
             for (const auto& stop_id: marked_stops) {
@@ -557,7 +550,7 @@ std::vector<std::pair<Time, Time>> Raptor::profile_query(const node_id_t& source
     }
 
     // We need to remove the entries dominated by a pure walking journey
-    if (m_algo == "HLR") {
+    if (use_hl) {
         auto walking_time = m_timetable->walking_time(source_id, target_id);
         std::vector<std::pair<Time, Time>> non_dominated_entries;
         non_dominated_entries.emplace_back(0, walking_time);

@@ -4,6 +4,7 @@
 #include <utility> // std::move
 #include <vector>
 
+#include "config.hpp"
 #include "data_structure.hpp"
 
 
@@ -35,7 +36,7 @@ struct Result {
 using Results = std::vector<Result>;
 
 
-void write_results(const Results& results, const std::string& name, const std::string& algo);
+void write_results(const Results& results);
 
 
 class Experiment {
@@ -49,7 +50,7 @@ public:
     explicit Experiment(const Timetable* timetable) :
             m_timetable {timetable}, m_queries {read_queries()} {}
 
-    void run(const std::string& algo, const std::string& type) const;
+    void run() const;
 };
 
 #endif // EXPERIMENTS_HPP

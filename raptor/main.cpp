@@ -1,51 +1,40 @@
 #include <iostream>
 
+#include "config.hpp"
+#include "clara.hpp"
 #include "data_structure.hpp"
 #include "experiments.hpp"
 
-
-void usage_exit(char* argv[]) {
-    auto paragraph = [](std::string s, size_t width = 80) -> std::string {
-        std::string acc;
-        while (!s.empty()) {
-            size_t pos = s.size();
-            if (pos > width) pos = s.rfind(' ', width);
-            std::string line = s.substr(0, pos);
-            acc += line + "\n";
-            s = s.substr(pos);
-
-            // Remove the space starting the line
-            if (s[0] == ' ') s = s.substr(1);
-        }
-        return acc;
-    };
-
-    std::cerr << "Usage: " << argv[0] << " name algo type\n\n"
-              << paragraph("Run the RAPTOR/HL-RAPTOR algorithm with the generated queries and log "
-                           "the running time and arrival times of each query.\n")
-              << "Positional arguments:\n"
-              << " name\tThe name of the dataset to be used in the algorithm\n"
-              << " algo\tThe choice of the algorithm: R for RAPTOR, HLR for HL-RAPTOR\n"
-              << " type\tThe type of query: n for normal query, p for profile query\n";
-    exit(1);
-}
+std::string name;
+bool use_hl;
+bool profile;
+bool ranked;
 
 
 int main(int argc, char* argv[]) {
-    std::string algo {argc == 4 ? argv[2] : ""};
-    std::string query_type {argc == 4 ? argv[3] : ""};
+    bool show_help;
+    auto cli_parser = clara::Arg(name, "name")("The name of the dataset to be used in the algorithm") |
+                      clara::Opt(use_hl)["--hl"]("Unrestricted walking with hub labelling") |
+                      clara::Opt(profile)["-p"]["--profile"]("Run profile query") |
+                      clara::Opt(ranked)["-r"]["--ranked"]("Used ranked queries") |
+                      clara::Help(show_help);
 
-    if (argc != 4 || (algo != "R" && algo != "HLR") || (query_type != "p" && query_type != "n")) {
-        usage_exit(argv);
+    auto result = cli_parser.parse(clara::Args(argc, argv));
+    if (!result) {
+        std::cerr << "Error in command line: " << result.errorMessage() << std::endl;
+        cli_parser.writeToStream(std::cout);
+        exit(1);
+    }
+    if (show_help) {
+        cli_parser.writeToStream(std::cout);
+        return 0;
     }
 
-    std::string name {argv[1]};
-
-    Timetable timetable {name, algo};
+    Timetable timetable;
     timetable.summary();
 
     Experiment exp {&timetable};
-    exp.run(algo, query_type);
+    exp.run();
 
     return 0;
 }

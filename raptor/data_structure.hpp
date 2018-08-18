@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "config.hpp"
 #include "utilities.hpp"
 
 
@@ -127,9 +128,6 @@ struct Route {
 
 class Timetable {
 private:
-    std::string m_name;
-    std::string m_algo;
-    std::string m_path;
     std::vector<Route> m_routes;
     std::vector<Stop> m_stops;
     std::unordered_map<trip_id_t, trip_pos_t> m_trip_positions;
@@ -149,9 +147,7 @@ private:
     void parse_stop_times();
 
 public:
-    const std::string& name() const { return m_name; }
-
-    const std::string& path() const { return m_path; }
+    std::string path;
 
     const std::vector<Route>& routes() const { return m_routes; }
 
@@ -169,8 +165,8 @@ public:
 
     Time walking_time(const node_id_t& source_id, const node_id_t& target_id) const;
 
-    Timetable(std::string name, std::string algo) : m_name {std::move(name)}, m_algo {std::move(algo)} {
-        m_path = "../Public-Transit-Data/" + m_name + "/";
+    Timetable() {
+        path = "../Public-Transit-Data/" + name + "/";
         parse_data();
     }
 

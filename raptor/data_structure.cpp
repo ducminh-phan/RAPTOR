@@ -16,8 +16,11 @@ void Timetable::parse_data() {
 
     parse_trips();
     parse_stop_routes();
-    if (m_algo == "R") parse_transfers();
-    if (m_algo == "HLR") parse_hubs();
+    if (!use_hl) {
+        parse_transfers();
+    } else {
+        parse_hubs();
+    }
     parse_stop_times();
 
     std::cout << "Complete parsing the data." << std::endl;
@@ -26,7 +29,7 @@ void Timetable::parse_data() {
 
 
 void Timetable::parse_trips() {
-    auto trips_file = read_dataset_file<igzstream>(m_path + "trips.csv.gz");
+    auto trips_file = read_dataset_file<igzstream>(path + "trips.csv.gz");
 
     for (CSVIterator<uint32_t> iter {trips_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto route_id = static_cast<route_id_t>((*iter)[0]);
@@ -49,7 +52,7 @@ void Timetable::parse_trips() {
 
 
 void Timetable::parse_stop_routes() {
-    auto stop_routes_file = read_dataset_file<igzstream>(m_path + "stop_routes.csv.gz");
+    auto stop_routes_file = read_dataset_file<igzstream>(path + "stop_routes.csv.gz");
 
     for (CSVIterator<uint32_t> iter {stop_routes_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto stop_id = static_cast<node_id_t>((*iter)[0]);
@@ -68,7 +71,7 @@ void Timetable::parse_stop_routes() {
 
 
 void Timetable::parse_transfers() {
-    auto transfers_file = read_dataset_file<igzstream>(m_path + "transfers.csv.gz");
+    auto transfers_file = read_dataset_file<igzstream>(path + "transfers.csv.gz");
 
     for (CSVIterator<uint32_t> iter {transfers_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto from = static_cast<node_id_t>((*iter)[0]);
@@ -88,7 +91,7 @@ void Timetable::parse_transfers() {
 
 
 void Timetable::parse_hubs() {
-    auto in_hub_file = read_dataset_file<igzstream>(m_path + "in_hubs.gr.gz");
+    auto in_hub_file = read_dataset_file<igzstream>(path + "in_hubs.gr.gz");
 
     for (CSVIterator<uint32_t> iter {in_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto node_id = static_cast<node_id_t>((*iter)[0]);
@@ -100,7 +103,7 @@ void Timetable::parse_hubs() {
         m_inverse_in_hubs[node_id].emplace_back(time, stop_id);
     }
 
-    auto out_hub_file = read_dataset_file<igzstream>(m_path + "out_hubs.gr.gz");
+    auto out_hub_file = read_dataset_file<igzstream>(path + "out_hubs.gr.gz");
 
     for (CSVIterator<uint32_t> iter {out_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto stop_id = static_cast<node_id_t>((*iter)[0]);
@@ -128,7 +131,7 @@ void Timetable::parse_hubs() {
 
 
 void Timetable::parse_stop_times() {
-    auto stop_times_file = read_dataset_file<igzstream>(m_path + "stop_times.csv.gz");
+    auto stop_times_file = read_dataset_file<igzstream>(path + "stop_times.csv.gz");
 
     for (CSVIterator<uint32_t> iter {stop_times_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
         auto trip_id = static_cast<trip_id_t>((*iter)[0]);
@@ -160,7 +163,7 @@ void Timetable::summary() const {
     std::cout << std::string(80, '-') << std::endl;
 
     std::cout << "Summary of the dataset:" << std::endl;
-    std::cout << "Name: " << m_name << std::endl;
+    std::cout << "Name: " << name << std::endl;
 
     std::cout << m_routes.size() << " routes" << std::endl;
 
@@ -190,11 +193,9 @@ void Timetable::summary() const {
     }
     std::cout << count_stops << " stops" << std::endl;
 
-    if (m_algo == "R") {
+    if (!use_hl) {
         std::cout << count_transfers << " transfers" << std::endl;
-    }
-
-    if (m_algo == "HLR") {
+    } else {
         std::cout.setf(std::ios::fixed, std::ios::floatfield);
         std::cout.precision(3);
         std::cout << count_hubs / static_cast<double>(count_stops) << " hubs in average" << std::endl;
@@ -207,7 +208,7 @@ void Timetable::summary() const {
 
 
 Time Timetable::walking_time(const node_id_t& source_id, const node_id_t& target_id) const {
-    if (m_algo != "HLR") throw NotImplemented();
+    if (!use_hl) throw NotImplemented();
 
     std::unordered_map<node_id_t, Time> tmp_hub_labels;
     Time arrival_time {};

@@ -3,19 +3,23 @@
 #include <string>
 
 #include "catch.hpp"
+#include "config.hpp"
 
 
-std::string g_location;
+std::string name;
+bool use_hl;
+bool profile;
+bool ranked;
 
 
 int main(int argc, char* argv[]) {
     Catch::Session session; // There must be exactly one instance
 
-    std::string location;
+    std::string _name;
 
     // Build a new parser on top of Catch's
     using namespace Catch::clara;
-    auto cli = Arg(location, "location") // bind variable to a new option, with a hint string
+    auto cli = Arg(_name, "location") // bind variable to a new option, with a hint string
                ("The location of the dataset to test") |
                session.cli(); // description string for the help output
 
@@ -27,7 +31,7 @@ int main(int argc, char* argv[]) {
     if (returnCode != 0) // Indicates a command line error
         return returnCode;
 
-    g_location = location;
+    name = _name;
 
     return session.run();
 }

@@ -2,9 +2,6 @@
 #include "data_structure.hpp"
 
 
-extern const std::string g_location;
-
-
 // The rows in each stop_times table are ordered
 bool test_stop_times_rows_ordered(const Timetable& timetable) {
     for (const auto& route: timetable.routes()) {
@@ -60,7 +57,7 @@ bool test_unique_pattern(const Timetable& timetable) {
 
 
 TEST_CASE("Test the sanity of the dataset and parser", "") {
-    Timetable timetable {g_location, "R"};
+    Timetable timetable {};
     timetable.summary();
 
     REQUIRE(test_stop_times_rows_ordered(timetable));

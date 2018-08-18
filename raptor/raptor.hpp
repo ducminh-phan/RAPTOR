@@ -7,6 +7,7 @@
 #include <set>
 #include <utility> // std::pair
 
+#include "config.hpp"
 #include "data_structure.hpp"
 
 
@@ -17,8 +18,6 @@ using labels_t = std::unordered_map<node_id_t, std::vector<Time>>;
 class Raptor {
 private:
     const Timetable* const m_timetable;
-    const std::string m_algo;
-    const std::string m_type;
 
     bool check_stops_order(const route_id_t& route, const node_id_t& stop1, const node_id_t& stop2,
                            const bool& backward = false);
@@ -29,8 +28,7 @@ private:
                             const Time& t, const bool& backward = false);
 
 public:
-    Raptor(const Timetable* timetable_p, std::string algo, std::string type) :
-            m_timetable {timetable_p}, m_algo {std::move(algo)}, m_type {std::move(type)} {}
+    explicit Raptor(const Timetable* timetable_p) : m_timetable {timetable_p} {}
 
     std::vector<Time> query(const node_id_t& source_id, const node_id_t& target_id, const Time& departure_time);
 
