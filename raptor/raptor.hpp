@@ -23,13 +23,11 @@ private:
     std::vector<Time> earliest_arrival_time;
     std::vector<Time> tmp_hub_labels;
 
-    bool check_stops_order(const route_id_t& route, const node_id_t& stop1, const node_id_t& stop2,
-                           const bool& backward = false);
+    bool check_stops_order(const route_id_t& route, const node_id_t& stop1, const node_id_t& stop2);
 
-    route_stop_queue_t make_queue(std::set<node_id_t>& marked_stops, const bool& backward = false);
+    route_stop_queue_t make_queue(std::set<node_id_t>& marked_stops);
 
-    trip_id_t earliest_trip(const route_id_t& route_id, const size_t& stop_idx,
-                            const Time& t, const bool& backward = false);
+    trip_id_t earliest_trip(const route_id_t& route_id, const size_t& stop_idx, const Time& t);
 
     void scan_footpaths(const node_id_t& target_id);
 
@@ -44,7 +42,7 @@ public:
 };
 
 
-using cache_key_t = std::tuple<route_id_t, size_t, Time::value_type, bool>;
+using cache_key_t = std::tuple<route_id_t, size_t, Time::value_type>;
 
 
 #endif // RAPTOR_HPP

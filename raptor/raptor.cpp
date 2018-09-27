@@ -10,29 +10,21 @@ const node_id_t MAX_NODES = 1000000;
 
 
 // Check if stop1 comes before/after stop2 in the route
-bool Raptor::check_stops_order(const route_id_t& route_id, const node_id_t& stop1, const node_id_t& stop2,
-                               const bool& backward) {
+bool Raptor::check_stops_order(const route_id_t& route_id, const node_id_t& stop1, const node_id_t& stop2) {
     #ifdef PROFILE
     Profiler prof {__func__};
     #endif
 
     const auto& route = m_timetable->routes(route_id);
 
-    if (backward) {
-        const auto& idx1 = route.stop_positions.at(stop1).back();
-        const auto& idx2 = route.stop_positions.at(stop2).back();
+    const auto& idx1 = route.stop_positions.at(stop1).front();
+    const auto& idx2 = route.stop_positions.at(stop2).front();
 
-        return idx1 > idx2;
-    } else {
-        const auto& idx1 = route.stop_positions.at(stop1).front();
-        const auto& idx2 = route.stop_positions.at(stop2).front();
-
-        return idx1 < idx2;
-    }
+    return idx1 < idx2;
 }
 
 
-route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops, const bool& backward) {
+route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops) {
     #ifdef PROFILE
     Profiler prof {__func__};
     #endif
@@ -50,7 +42,7 @@ route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops, const b
                 const auto& p = route_iter->second;
 
                 // If s comes before p, replace p by s
-                if (check_stops_order(route_id, stop_id, p, backward)) {
+                if (check_stops_order(route_id, stop_id, p)) {
                     queue[route_id] = stop_id;
                 }
             } else {
@@ -69,8 +61,7 @@ route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops, const b
 // Find the earliest trip in route r that one can catch at stop s in round k,
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s),
 // or the latest trip t such that t_arr(t, s) <= t_(k-1) (s) if the query is backward
-trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_idx,
-                                const Time& t, const bool& backward) {
+trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_idx, const Time& t) {
     static std::unordered_map<cache_key_t, trip_id_t, std::hash<cache_key_t>> cache;
 
     #ifdef PROFILE
@@ -81,7 +72,7 @@ trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_i
     // This speeds up the function since the label could be the same in several rounds,
     // so that we do not need to find the earliest trip again in another round if the
     // label remains the same.
-    cache_key_t key = std::make_tuple(route_id, stop_idx, t.val(), backward);
+    cache_key_t key = std::make_tuple(route_id, stop_idx, t.val());
     auto search = cache.find(key);
     if (search != cache.end()) {
         #ifdef PROFILE
@@ -101,44 +92,25 @@ trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_i
     const auto& stop_times = route.stop_times;
     trip_id_t earliest_trip = NULL_TRIP;
 
-    if (!backward) {
-        auto first = stop_times.begin();
-        size_t count = stop_times.size();
-        size_t step;
-        while (count > 0) {
-            auto it = first;
-            step = count / 2;
-            std::advance(it, step);
+    auto first = stop_times.begin();
+    size_t count = stop_times.size();
+    size_t step;
+    while (count > 0) {
+        auto it = first;
+        step = count / 2;
+        std::advance(it, step);
 
-            const Time& dep = stop_times.at(static_cast<size_t>(it - stop_times.begin())).at(stop_idx).dep;
-            if (dep < t) {
-                first = ++it;
-                count -= step + 1;
-            } else {
-                count = step;
-            }
+        const Time& dep = stop_times.at(static_cast<size_t>(it - stop_times.begin())).at(stop_idx).dep;
+        if (dep < t) {
+            first = ++it;
+            count -= step + 1;
+        } else {
+            count = step;
         }
-
-        if (first == stop_times.end()) return NULL_TRIP;
-
-        return route.trips.at(static_cast<size_t>(first - stop_times.begin()));
     }
 
-    for (size_t j = 0; j < stop_times.size(); ++j) {
-        size_t i = stop_times.size() - 1 - j;
-        trip_id_t r = route.trips[i];
-
-        // The arrival time of the current trip at stop_id
-        const Time& arr = stop_times.at(i).at(stop_idx).arr;
-
-        if (arr <= t) {
-            // We are scanning the column corresponding to the stop from bottom to top,
-            // i.e., in the decreasing order of time. Thus the first cell such that
-            // the arrival time is not later than t corresponds to the earliest trip
-            // we can catch at the stop in the backward direction.
-            earliest_trip = r;
-            break;
-        }
+    if (first != stop_times.end()) {
+        earliest_trip = route.trips.at(static_cast<size_t>(first - stop_times.begin()));
     }
 
     cache[key] = earliest_trip;
