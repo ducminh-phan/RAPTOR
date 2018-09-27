@@ -11,3 +11,7 @@ target_link_libraries(raptor raptor_lib)
 target_link_libraries(raptor z)
 set_target_properties(raptor PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
 set_target_properties(raptor_lib PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(raptor_lib Threads::Threads)

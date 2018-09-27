@@ -17,7 +17,7 @@ struct NodeLabel {
     std::vector<Node> hubs;
     std::vector<Distance> distances;
 
-    const size_t size() const { return hubs.size(); }
+    size_t size() const { return hubs.size(); }
 };
 
 class GraphLabel {
@@ -48,7 +48,7 @@ public:
         parse_weights();
     };
 
-    const Distance shortest_path_length(const Node& u, const Node& v) const;
+    Distance shortest_path_length(const Node& u, const Node& v) const;
 
     const std::vector<std::pair<Distance, Node>> single_source_shortest_path_length(const Node& source) const;
 

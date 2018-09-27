@@ -2,46 +2,48 @@
 #include <cmath>
 
 #include "hub_labelling.hpp"
-#include "csv_reader.hpp"
+#include "csv.h"
 #include "gzstream.h"
 
 extern const Distance infty = std::numeric_limits<Distance>::max();
 
 void GraphLabel::parse_hub_files() {
-    auto in_hub_file = read_dataset_file<igzstream>(_path + "in_hubs.gr.gz");
+    igzstream in_hubs_file_stream {(_path + "in_hubs.gr.gz").c_str()};
+    io::CSVReader<3> in_hubs_reader {"in_hubs.gr", in_hubs_file_stream};
+    in_hubs_reader.set_header("node_id", "stop_id", "distance");
 
-    for (CSVIterator<uint32_t> iter {in_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
-        Node hub = (*iter)[0];
-        Node node_id = (*iter)[1];
-        Distance dist = (*iter)[2];
+    Node node_id;
+    Node stop_id;
+    Distance distance;
 
-        in_labels[node_id].hubs.emplace_back(hub);
-        in_labels[node_id].distances.emplace_back(dist);
+    while (in_hubs_reader.read_row(node_id, stop_id, distance)) {
+        in_labels[stop_id].hubs.emplace_back(node_id);
+        in_labels[stop_id].distances.emplace_back(distance);
     }
 
-    auto out_hub_file = read_dataset_file<igzstream>(_path + "out_hubs.gr.gz");
+    igzstream out_hubs_file_stream {(_path + "out_hubs.gr.gz").c_str()};
+    io::CSVReader<3> out_hubs_reader {"out_hubs.gr", out_hubs_file_stream};
+    out_hubs_reader.set_header("stop_id", "node_id", "distance");
 
-    for (CSVIterator<uint32_t> iter {out_hub_file.get(), false, ' '}; iter != CSVIterator<uint32_t>(); ++iter) {
-        Node node_id = (*iter)[0];
-        Node hub = (*iter)[1];
-        Distance dist = (*iter)[2];
-
-        out_labels[node_id].hubs.emplace_back(hub);
-        out_labels[node_id].distances.emplace_back(dist);
+    while (out_hubs_reader.read_row(stop_id, node_id, distance)) {
+        out_labels[stop_id].hubs.emplace_back(node_id);
+        out_labels[stop_id].distances.emplace_back(distance);
     }
 
     sort();
 }
 
 void GraphLabel::parse_weights() {
-    auto trips_file = read_dataset_file<igzstream>(_path + "trips.csv.gz");
-    auto stop_routes_file = read_dataset_file<igzstream>(_path + "stop_routes.csv.gz");
+    igzstream trips_file_stream {(_path + "trips.csv.gz").c_str()};
+    io::CSVReader<1> trips_file_reader {"trips.csv", trips_file_stream};
+    trips_file_reader.read_header(io::ignore_missing_column, "route_id");
+
+    route_id_t route_id;
 
     // Count the number of trips a route has
     std::unordered_map<route_id_t, size_t> trips_count;
 
-    for (CSVIterator<uint32_t> iter {trips_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
-        auto route_id = static_cast<route_id_t>((*iter)[0]);
+    while (trips_file_reader.read_row(route_id)) {
         trips_count[route_id] += 1;
     }
 
@@ -53,10 +55,13 @@ void GraphLabel::parse_weights() {
         stop_to_weight[kv.first] = 0;
     }
 
-    for (CSVIterator<uint32_t> iter {stop_routes_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
-        auto stop_id = static_cast<Node>((*iter)[0]);
-        auto route_id = static_cast<route_id_t>((*iter)[1]);
+    igzstream stop_routes_file_stream {(_path + "stop_routes.csv.gz").c_str()};
+    io::CSVReader<2> stop_routes_reader {"stop_routes.csv", stop_routes_file_stream};
+    stop_routes_reader.read_header(io::ignore_no_column, "stop_id", "route_id");
 
+    Node stop_id;
+
+    while (stop_routes_reader.read_row(stop_id, route_id)) {
         // We only add stops in the walking graph
         if (stop_to_weight.count(stop_id)) {
             stop_to_weight[stop_id] += trips_count.at(route_id);
@@ -98,7 +103,7 @@ void GraphLabel::sort(NodeLabel& node_labels) {
     }
 }
 
-const Distance GraphLabel::shortest_path_length(const Node& u, const Node& v) const {
+Distance GraphLabel::shortest_path_length(const Node& u, const Node& v) const {
     Distance d = infty;
     const auto& u_out_labels = out_labels.at(u);
     const auto& v_in_labels = in_labels.at(v);

@@ -4,7 +4,7 @@ project(raptor)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "-Wall -O3")
+set(CMAKE_CXX_FLAGS "-Wall -pedantic -Wno-maybe-uninitialized -O3")
 
 set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/catch)
 add_library(Catch INTERFACE)

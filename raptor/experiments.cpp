@@ -3,7 +3,8 @@
 
 #include "experiments.hpp"
 #include "raptor.hpp"
-#include "csv_reader.hpp"
+#include "csv.h"
+#include "gzstream.h"
 
 
 void write_results(const Results& results) {
@@ -41,12 +42,15 @@ Queries Experiment::read_queries() {
     std::string rank_str = ranked ? "rank_" : "";
     auto queries_file = read_dataset_file<std::ifstream>(m_timetable->path + rank_str + "queries.csv");
 
-    for (CSVIterator<uint32_t> iter {queries_file.get()}; iter != CSVIterator<uint32_t>(); ++iter) {
-        auto r = static_cast<uint16_t>((*iter)[0]);
-        auto s = static_cast<node_id_t>((*iter)[1]);
-        auto t = static_cast<node_id_t>((*iter)[2]);
-        auto d = static_cast<Time::value_type>((*iter)[3]);
+    igzstream queries_file_stream {(m_timetable->path + rank_str + "queries.csv").c_str()};
+    io::CSVReader<4> queries_file_reader {"queries.csv", queries_file_stream};
+    queries_file_reader.read_header(io::ignore_no_column, "rank", "source", "target", "time");
 
+    uint16_t r;
+    node_id_t s, t;
+    Time::value_type d;
+
+    while (queries_file_reader.read_row(r, s, t, d)) {
         queries.emplace_back(r, s, t, d);
     }
 

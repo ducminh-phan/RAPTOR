@@ -94,7 +94,7 @@ queries_t gen_query(const GraphLabel& gr_label) {
     }
 
     return queries;
-};
+}
 
 void write_queries(const queries_t& queries, const std::string& file_path) {
     std::ofstream file {file_path};
