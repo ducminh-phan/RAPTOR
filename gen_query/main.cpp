@@ -20,7 +20,7 @@ using queries_t = std::map<size_t, std::vector<Query>>;
 
 queries_t gen_query(const GraphLabel& gr_label) {
     const size_t max_query_size = 1000;
-    const size_t min_rank = 4;
+    const size_t min_rank = 2;
     size_t max_rank = min_rank;
     size_t inertia = 0;
     const size_t max_inertia = 1000;
@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
 
     auto queries = gen_query(gr_label);
 
-    write_queries(queries, gr_label.path() + "queries.csv");
+    write_queries(queries, gr_label.path() + "rank_queries.csv");
 
     return 0;
 }

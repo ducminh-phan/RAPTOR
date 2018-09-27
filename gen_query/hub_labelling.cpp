@@ -124,7 +124,6 @@ const std::vector<std::pair<Distance, Node>> GraphLabel::single_source_shortest_
     std::vector<std::pair<Distance, Node>> res;
     std::unordered_map<Node, Distance> distance_labels;
 
-    if (!out_labels.count(source)) std::cout << "wtf " << source << std::endl;
     const auto& source_out_labels = out_labels.at(source);
 
     // Propagate the distance to the out-hubs of the source
