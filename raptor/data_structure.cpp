@@ -67,6 +67,8 @@ void Timetable::parse_stop_routes() {
 
         m_stops[stop_id].routes.push_back(route_id);
     }
+
+    max_stop_id = max_node_id = m_stops.back().id;
 }
 
 
@@ -82,6 +84,9 @@ void Timetable::parse_transfers() {
             m_stops[from].transfers.emplace_back(to, time);
             m_stops[to].backward_transfers.emplace_back(from, time);
         }
+
+        max_node_id = std::max(max_node_id, static_cast<std::size_t>(from));
+        max_node_id = std::max(max_node_id, static_cast<std::size_t>(to));
     }
 
     for (auto& stop: m_stops) {
@@ -99,6 +104,11 @@ void Timetable::parse_hubs() {
         auto distance = static_cast<distance_t>((*iter)[2]);
         auto time = distance_to_time(distance);
 
+        if (node_id > max_node_id) {
+            max_node_id = node_id;
+            m_inverse_in_hubs.resize(max_node_id + 1);
+        }
+
         m_stops[stop_id].in_hubs.emplace_back(time, node_id);
         m_inverse_in_hubs[node_id].emplace_back(time, stop_id);
     }
@@ -111,6 +121,11 @@ void Timetable::parse_hubs() {
         auto distance = static_cast<distance_t>((*iter)[2]);
         auto time = distance_to_time(distance);
 
+        if (node_id > max_node_id) {
+            max_node_id = node_id;
+            m_inverse_out_hubs.resize(max_node_id + 1);
+        }
+
         m_stops[stop_id].out_hubs.emplace_back(time, node_id);
         m_inverse_out_hubs[node_id].emplace_back(time, stop_id);
     }
@@ -120,12 +135,12 @@ void Timetable::parse_hubs() {
         std::sort(stop.out_hubs.begin(), stop.out_hubs.end());
     }
 
-    for (auto& kv: m_inverse_in_hubs) {
-        std::sort(kv.second.begin(), kv.second.end());
+    for (auto& item: m_inverse_in_hubs) {
+        std::sort(item.begin(), item.end());
     }
 
-    for (auto& kv: m_inverse_out_hubs) {
-        std::sort(kv.second.begin(), kv.second.end());
+    for (auto& item: m_inverse_out_hubs) {
+        std::sort(item.begin(), item.end());
     }
 }
 

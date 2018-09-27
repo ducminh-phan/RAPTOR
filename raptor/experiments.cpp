@@ -62,17 +62,15 @@ void Experiment::run() const {
     for (size_t i = 0; i < m_queries.size(); ++i) {
         auto query = m_queries[i];
 
-        Timer timer;
         std::vector<Time> arrival_times;
+        raptor.init();
+        Timer timer;
 
-        if (!profile) {
-            arrival_times = raptor.query(query.source_id, query.target_id, query.dep);
-        } else {
-            raptor.profile_query(query.source_id, query.target_id);
-        }
+        arrival_times = raptor.query(query.source_id, query.target_id, query.dep);
 
         double running_time = timer.elapsed();
 
+        raptor.clear();
         res[i] = {query.rank, running_time, arrival_times};
 
         std::cout << i << std::endl;
