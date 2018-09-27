@@ -38,17 +38,17 @@ void Timetable::parse_trips() {
 
     while (trips_file_reader.read_row(route_id, trip_id)) {
         // Add a new route if we encounter a new id
-        while (m_routes.size() <= route_id) {
-            m_routes.emplace_back();
-            m_routes.back().id = static_cast<route_id_t>(m_routes.size() - 1);
+        while (routes.size() <= route_id) {
+            routes.emplace_back();
+            routes.back().id = static_cast<route_id_t>(routes.size() - 1);
         }
 
-        // Map the trip to its position in m_routes and trips, this map is used
+        // Map the trip to its position in routes and trips, this map is used
         // to quickly add the stop times later in the parse_stop_times function
-        m_trip_positions.insert({trip_id, {route_id, m_routes[route_id].trips.size()}});
+        trip_positions.insert({trip_id, {route_id, routes[route_id].trips.size()}});
 
-        m_routes[route_id].trips.push_back(trip_id);
-        m_routes[route_id].stop_times.emplace_back();
+        routes[route_id].trips.push_back(trip_id);
+        routes[route_id].stop_times.emplace_back();
     }
 }
 
@@ -64,15 +64,15 @@ void Timetable::parse_stop_routes() {
     while (stop_routes_reader.read_row(stop_id, route_id)) {
         // Add a new stop if we encounter a new id,
         // note that we might have a missing id, e.g., there is no route using stop #1674
-        while (m_stops.size() <= stop_id) {
-            m_stops.emplace_back();
-            m_stops.back().id = static_cast<node_id_t>(m_stops.size() - 1);
+        while (stops.size() <= stop_id) {
+            stops.emplace_back();
+            stops.back().id = static_cast<node_id_t>(stops.size() - 1);
         }
 
-        m_stops[stop_id].routes.push_back(route_id);
+        stops[stop_id].routes.push_back(route_id);
     }
 
-    max_stop_id = max_node_id = m_stops.back().id;
+    max_stop_id = max_node_id = stops.back().id;
 }
 
 
@@ -86,16 +86,16 @@ void Timetable::parse_transfers() {
     Time::value_type time;
 
     while (transfers_reader.read_row(from, to, time)) {
-        if (m_stops[from].is_valid() && m_stops[to].is_valid()) {
-            m_stops[from].transfers.emplace_back(to, time);
-            m_stops[to].backward_transfers.emplace_back(from, time);
+        if (stops[from].is_valid() && stops[to].is_valid()) {
+            stops[from].transfers.emplace_back(to, time);
+            stops[to].backward_transfers.emplace_back(from, time);
         }
 
         max_node_id = std::max(max_node_id, static_cast<std::size_t>(from));
         max_node_id = std::max(max_node_id, static_cast<std::size_t>(to));
     }
 
-    for (auto& stop: m_stops) {
+    for (auto& stop: stops) {
         std::sort(stop.transfers.begin(), stop.transfers.end());
     }
 }
@@ -115,11 +115,11 @@ void Timetable::parse_hubs() {
 
         if (node_id > max_node_id) {
             max_node_id = node_id;
-            m_inverse_in_hubs.resize(max_node_id + 1);
+            inverse_in_hubs.resize(max_node_id + 1);
         }
 
-        m_stops[stop_id].in_hubs.emplace_back(time, node_id);
-        m_inverse_in_hubs[node_id].emplace_back(time, stop_id);
+        stops[stop_id].in_hubs.emplace_back(time, node_id);
+        inverse_in_hubs[node_id].emplace_back(time, stop_id);
     }
 
     igzstream out_hubs_file_stream {(path + "out_hubs.gr.gz").c_str()};
@@ -131,23 +131,23 @@ void Timetable::parse_hubs() {
 
         if (node_id > max_node_id) {
             max_node_id = node_id;
-            m_inverse_out_hubs.resize(max_node_id + 1);
+            inverse_out_hubs.resize(max_node_id + 1);
         }
 
-        m_stops[stop_id].out_hubs.emplace_back(time, node_id);
-        m_inverse_out_hubs[node_id].emplace_back(time, stop_id);
+        stops[stop_id].out_hubs.emplace_back(time, node_id);
+        inverse_out_hubs[node_id].emplace_back(time, stop_id);
     }
 
-    for (auto& stop: m_stops) {
+    for (auto& stop: stops) {
         std::sort(stop.in_hubs.begin(), stop.in_hubs.end());
         std::sort(stop.out_hubs.begin(), stop.out_hubs.end());
     }
 
-    for (auto& item: m_inverse_in_hubs) {
+    for (auto& item: inverse_in_hubs) {
         std::sort(item.begin(), item.end());
     }
 
-    for (auto& item: m_inverse_out_hubs) {
+    for (auto& item: inverse_out_hubs) {
         std::sort(item.begin(), item.end());
     }
 }
@@ -163,21 +163,21 @@ void Timetable::parse_stop_times() {
     node_id_t stop_id;
 
     while (stop_times_reader.read_row(trip_id, arr, dep, stop_id)) {
-        trip_pos_t trip_pos = m_trip_positions.at(trip_id);
+        trip_pos_t trip_pos = trip_positions.at(trip_id);
         route_id_t route_id = trip_pos.first;
         size_t pos = trip_pos.second;
 
-        m_routes[route_id].stop_times[pos].emplace_back(stop_id, arr, dep);
+        routes[route_id].stop_times[pos].emplace_back(stop_id, arr, dep);
 
         // Create the stop sequence of the route corresponding to trip_id,
         // we add stop_id to the stop sequence only once by checking if
         // trip_id is the first trip of its route
-        if (trip_id == m_routes[route_id].trips[0]) {
-            auto& stops = m_routes[route_id].stops;
+        if (trip_id == routes[route_id].trips[0]) {
+            auto& stops = routes[route_id].stops;
             stops.push_back(stop_id);
 
             // Map the stop_id to its index in the stop sequence
-            m_routes[route_id].stop_positions[stop_id].push_back(stops.size() - 1);
+            routes[route_id].stop_positions[stop_id].push_back(stops.size() - 1);
         }
     }
 }
@@ -189,11 +189,11 @@ void Timetable::summary() const {
     std::cout << "Summary of the dataset:" << std::endl;
     std::cout << "Name: " << name << std::endl;
 
-    std::cout << m_routes.size() << " routes" << std::endl;
+    std::cout << routes.size() << " routes" << std::endl;
 
     int count_trips = 0;
     int count_stop_times = 0;
-    for (const auto& route: m_routes) {
+    for (const auto& route: routes) {
         count_trips += route.trips.size();
         for (const auto& stop_time: route.stop_times) {
             count_stop_times += stop_time.size();
@@ -206,7 +206,7 @@ void Timetable::summary() const {
     int count_stops = 0;
     int count_hubs = 0;
     int count_transfers = 0;
-    for (const auto& stop: m_stops) {
+    for (const auto& stop: stops) {
         if (stop.is_valid()) {
             count_stops += 1;
         }
@@ -238,7 +238,7 @@ Time Timetable::walking_time(const node_id_t& source_id, const node_id_t& target
     Time arrival_time {};
 
     // Find the earliest time to get to the out hubs of the source
-    for (const auto& kv: m_stops[source_id].out_hubs) {
+    for (const auto& kv: stops[source_id].out_hubs) {
         auto walking_time = kv.first;
         auto hub_id = kv.second;
 
@@ -246,7 +246,7 @@ Time Timetable::walking_time(const node_id_t& source_id, const node_id_t& target
     }
 
     // Propagate the time from the hubs to the target
-    for (const auto& kv: m_stops[target_id].in_hubs) {
+    for (const auto& kv: stops[target_id].in_hubs) {
         auto walking_time = kv.first;
         auto hub_id = kv.second;
 

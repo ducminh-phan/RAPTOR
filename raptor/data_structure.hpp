@@ -128,12 +128,6 @@ struct Route {
 
 class Timetable {
 private:
-    std::vector<Route> m_routes;
-    std::vector<Stop> m_stops;
-    std::unordered_map<trip_id_t, trip_pos_t> m_trip_positions;
-    inverse_hubs_t m_inverse_in_hubs;
-    inverse_hubs_t m_inverse_out_hubs;
-
     void parse_data();
 
     void parse_trips();
@@ -150,20 +144,11 @@ public:
     std::string path;
     std::size_t max_stop_id = 0;
     std::size_t max_node_id = 0;
-
-    const std::vector<Route>& routes() const { return m_routes; }
-
-    const Route& routes(route_id_t route_id) const { return m_routes[route_id]; }
-
-    const std::vector<Stop>& stops() const { return m_stops; }
-
-    const Stop& stops(node_id_t stop_id) const { return m_stops[stop_id]; }
-
-    const trip_pos_t& trip_positions(trip_id_t trip_id) const { return m_trip_positions.at(trip_id); }
-
-    const inverse_hubs_t& inverse_in_hubs() const { return m_inverse_in_hubs; }
-
-    const inverse_hubs_t& inverse_out_hubs() const { return m_inverse_out_hubs; }
+    std::vector<Route> routes;
+    std::vector<Stop> stops;
+    std::unordered_map<trip_id_t, trip_pos_t> trip_positions;
+    inverse_hubs_t inverse_in_hubs;
+    inverse_hubs_t inverse_out_hubs;
 
     Time walking_time(const node_id_t& source_id, const node_id_t& target_id) const;
 

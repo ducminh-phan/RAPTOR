@@ -5,9 +5,6 @@
 
 #include "raptor.hpp"
 
-const node_id_t MAX_STOPS = 100000;
-const node_id_t MAX_NODES = 1000000;
-
 
 // Check if stop1 comes before/after stop2 in the route
 bool Raptor::check_stops_order(const route_id_t& route_id, const node_id_t& stop1, const node_id_t& stop2) {
@@ -15,7 +12,7 @@ bool Raptor::check_stops_order(const route_id_t& route_id, const node_id_t& stop
     Profiler prof {__func__};
     #endif
 
-    const auto& route = m_timetable->routes(route_id);
+    const auto& route = m_timetable->routes[route_id];
 
     const auto& idx1 = route.stop_positions.at(stop1).front();
     const auto& idx2 = route.stop_positions.at(stop2).front();
@@ -32,7 +29,7 @@ route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops) {
     route_stop_queue_t queue;
 
     for (const auto& stop_id: marked_stops) {
-        const Stop& stop = m_timetable->stops(stop_id);
+        const Stop& stop = m_timetable->stops[stop_id];
 
         for (const auto& route_id: stop.routes) {
             const auto& route_iter = queue.find(route_id);
@@ -73,7 +70,7 @@ trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_i
     // so that we do not need to find the earliest trip again in another round if the
     // label remains the same.
     cache_key_t key = std::make_tuple(route_id, stop_idx, t.val());
-    auto search = cache.find(key);
+    const auto& search = cache.find(key);
     if (search != cache.end()) {
         #ifdef PROFILE
         delete prof_c;
@@ -87,7 +84,7 @@ trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_i
     Profiler prof {__func__};
     #endif
 
-    const auto& route = m_timetable->routes(route_id);
+    const auto& route = m_timetable->routes[route_id];
 
     const auto& stop_times = route.stop_times;
     trip_id_t earliest_trip = NULL_TRIP;
@@ -166,10 +163,10 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
         for (const auto& route_stop: queue) {
             const auto& route_id = route_stop.first;
             const auto& stop_id = route_stop.second;
-            auto& route = m_timetable->routes(route_id);
+            auto& route = m_timetable->routes[route_id];
 
             trip_id_t t = NULL_TRIP;
-            size_t stop_idx = route.stop_positions.at(stop_id).front();
+            size_t stop_idx = route.stop_positions[stop_id].front();
 
             // Iterate over the stops of the route beginning with stop_id
             for (size_t i = stop_idx; i < route.stops.size(); ++i) {
@@ -178,7 +175,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
                 if (t != NULL_TRIP) {
                     // Get the position of the trip t
-                    trip_pos_t trip_pos = m_timetable->trip_positions(t);
+                    trip_pos_t trip_pos = m_timetable->trip_positions[t];
                     size_t pos = trip_pos.second;
 
                     // Get the departure and arrival time of the trip t at the stop p_i
@@ -242,7 +239,7 @@ void Raptor::scan_footpaths(const node_id_t& target_id) {
         std::unordered_set<node_id_t> stops_to_mark;
 
         for (const auto& stop_id: marked_stops) {
-            for (const auto& transfer: m_timetable->stops(stop_id).transfers) {
+            for (const auto& transfer: m_timetable->stops[stop_id].transfers) {
                 const auto& dest_id = transfer.dest;
                 const auto& transfer_time = transfer.time;
 
@@ -267,7 +264,7 @@ void Raptor::scan_footpaths(const node_id_t& target_id) {
         std::unordered_set<node_id_t> improved_hubs;
 
         for (const auto& stop_id: marked_stops) {
-            for (const auto& kv: m_timetable->stops(stop_id).out_hubs) {
+            for (const auto& kv: m_timetable->stops[stop_id].out_hubs) {
                 const auto& walking_time = kv.first;
                 const auto& hub_id = kv.second;
 
@@ -288,8 +285,8 @@ void Raptor::scan_footpaths(const node_id_t& target_id) {
         for (const auto& hub_id: improved_hubs) {
             // We need to check if hub_id, which is the out-hub of some stop,
             // is the in-hub of some other stop
-            if (m_timetable->inverse_in_hubs()[hub_id].empty()) {
-                for (const auto& kv: m_timetable->inverse_in_hubs().at(hub_id)) {
+            if (m_timetable->inverse_in_hubs[hub_id].empty()) {
+                for (const auto& kv: m_timetable->inverse_in_hubs[hub_id]) {
                     const auto& walking_time = kv.first;
                     const auto& stop_id = kv.second;
 
