@@ -55,6 +55,8 @@ public:
     const std::vector<Node> sssp_sorted_stops(const Node& source) const;
 
     const std::string& path() const { return _path; }
+
+    size_t compute_rank(const Node& source, const Node& target) const;
 };
 
 #endif // HUB_LABELLING_HPP

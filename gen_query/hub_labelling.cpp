@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 
 #include "hub_labelling.hpp"
 #include "csv_reader.hpp"
@@ -169,4 +170,17 @@ const std::vector<Node> GraphLabel::sssp_sorted_stops(const Node& source) const 
     }
 
     return res;
+}
+
+size_t GraphLabel::compute_rank(const Node& source, const Node& target) const {
+    auto sorted_stops = sssp_sorted_stops(source);
+
+    // Get the index of the target
+    auto iter = std::find(sorted_stops.begin(), sorted_stops.end(), target);
+    size_t idx = static_cast<size_t>(iter - sorted_stops.begin());
+
+    // Get the rank
+    auto rank = static_cast<size_t>(std::floor(std::log2(idx)));
+
+    return rank;
 }
