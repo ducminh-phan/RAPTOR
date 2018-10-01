@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <iostream>
-#include <memory> // std::unique_ptr
 #include <limits> // std::numeric_limits
 #include <string>
 #include <utility>
@@ -119,7 +118,8 @@ struct Route {
     route_id_t id;
     std::vector<trip_id_t> trips;
     std::vector<node_id_t> stops;
-    std::vector<std::vector<StopTime>> stop_times;
+    std::vector<std::vector<StopTime>> stop_times_by_trips;
+    std::vector<std::vector<StopTime>> stop_times_by_stops;
     std::vector<size_t> stop_positions;
 };
 

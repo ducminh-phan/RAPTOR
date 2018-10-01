@@ -179,8 +179,8 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
                     size_t pos = trip_pos.second;
 
                     // Get the departure and arrival time of the trip t at the stop p_i
-                    dep = route.stop_times[pos][i].dep;
-                    arr = route.stop_times[pos][i].arr;
+                    dep = route.stop_times_by_trips[pos][i].dep;
+                    arr = route.stop_times_by_trips[pos][i].arr;
 
                     // Local and target pruning
                     if (arr < std::min(earliest_arrival_time[p_i], earliest_arrival_time[target_id])) {

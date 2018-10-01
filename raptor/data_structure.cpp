@@ -51,7 +51,7 @@ void Timetable::parse_trips() {
         trip_positions[trip_id] = {route_id, routes[route_id].trips.size()};
 
         routes[route_id].trips.push_back(trip_id);
-        routes[route_id].stop_times.emplace_back();
+        routes[route_id].stop_times_by_trips.emplace_back();
     }
 }
 
@@ -174,7 +174,7 @@ void Timetable::parse_stop_times() {
         route_id_t route_id = trip_pos.first;
         size_t pos = trip_pos.second;
 
-        routes[route_id].stop_times[pos].emplace_back(stop_id, arr, dep);
+        routes[route_id].stop_times_by_trips[pos].emplace_back(stop_id, arr, dep);
 
         // Create the stop sequence of the route corresponding to trip_id,
         // we add stop_id to the stop sequence only once by checking if
@@ -195,6 +195,19 @@ void Timetable::parse_stop_times() {
             }
         }
     }
+
+    // Create the stop_times_by_stops for each route, which is the transpose of stop_times_by_trips
+    for (auto& route: routes) {
+        const auto& n_stops = route.stops.size();
+        route.stop_times_by_stops.resize(n_stops);
+
+        // Iterate over each stop in the pattern of the route only once
+        for (size_t i = 0; i < n_stops; ++i) {
+            for (const auto& trip_stop_times: route.stop_times_by_trips) {
+                route.stop_times_by_stops[i].push_back(trip_stop_times[i]);
+            }
+        }
+    }
 }
 
 
@@ -210,7 +223,7 @@ void Timetable::summary() const {
     int count_stop_times = 0;
     for (const auto& route: routes) {
         count_trips += route.trips.size();
-        for (const auto& stop_time: route.stop_times) {
+        for (const auto& stop_time: route.stop_times_by_trips) {
             count_stop_times += stop_time.size();
         }
     }
