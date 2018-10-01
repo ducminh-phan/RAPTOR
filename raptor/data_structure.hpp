@@ -6,8 +6,6 @@
 #include <memory> // std::unique_ptr
 #include <limits> // std::numeric_limits
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -122,7 +120,7 @@ struct Route {
     std::vector<trip_id_t> trips;
     std::vector<node_id_t> stops;
     std::vector<std::vector<StopTime>> stop_times;
-    std::unordered_map<node_id_t, std::vector<size_t>> stop_positions;
+    std::vector<std::vector<size_t>> stop_positions;
 };
 
 
@@ -146,7 +144,7 @@ public:
     std::size_t max_node_id = 0;
     std::vector<Route> routes;
     std::vector<Stop> stops;
-    std::unordered_map<trip_id_t, trip_pos_t> trip_positions;
+    std::vector<trip_pos_t> trip_positions;
     inverse_hubs_t inverse_in_hubs;
     inverse_hubs_t inverse_out_hubs;
 

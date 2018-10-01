@@ -4,7 +4,7 @@
 
 // The rows in each stop_times table are ordered
 bool test_stop_times_rows_ordered(const Timetable& timetable) {
-    for (const auto& route: timetable.routes()) {
+    for (const auto& route: timetable.routes) {
         for (size_t j = 0; j < route.stops.size() - 1; ++j) {
             for (size_t i = 0; i < route.trips.size(); ++i) {
                 if (route.stop_times[i][j].arr > route.stop_times[i][j + 1].arr) {
@@ -20,7 +20,7 @@ bool test_stop_times_rows_ordered(const Timetable& timetable) {
 
 // The columns in each stop_times table are ordered
 bool test_stop_times_columns_ordered(const Timetable& timetable) {
-    for (const auto& route: timetable.routes()) {
+    for (const auto& route: timetable.routes) {
         for (size_t i = 0; i < route.trips.size() - 1; ++i) {
             for (size_t j = 0; j < route.stops.size(); ++j) {
                 if (route.stop_times[i][j].arr > route.stop_times[i + 1][j].arr) {
@@ -36,7 +36,7 @@ bool test_stop_times_columns_ordered(const Timetable& timetable) {
 
 // The trips of a route have the same stop pattern
 bool test_unique_pattern(const Timetable& timetable) {
-    for (const auto& route: timetable.routes()) {
+    for (const auto& route: timetable.routes) {
         auto stops = route.stops;
 
         for (const auto& row: route.stop_times) {

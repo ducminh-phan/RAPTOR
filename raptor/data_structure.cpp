@@ -45,7 +45,10 @@ void Timetable::parse_trips() {
 
         // Map the trip to its position in routes and trips, this map is used
         // to quickly add the stop times later in the parse_stop_times function
-        trip_positions.insert({trip_id, {route_id, routes[route_id].trips.size()}});
+        if (static_cast<size_t>(trip_id) >= trip_positions.size()) {
+            trip_positions.resize(static_cast<size_t>(trip_id + 1));
+        }
+        trip_positions[trip_id] = {route_id, routes[route_id].trips.size()};
 
         routes[route_id].trips.push_back(trip_id);
         routes[route_id].stop_times.emplace_back();
@@ -163,7 +166,7 @@ void Timetable::parse_stop_times() {
     node_id_t stop_id;
 
     while (stop_times_reader.read_row(trip_id, arr, dep, stop_id)) {
-        trip_pos_t trip_pos = trip_positions.at(trip_id);
+        trip_pos_t trip_pos = trip_positions[trip_id];
         route_id_t route_id = trip_pos.first;
         size_t pos = trip_pos.second;
 
@@ -177,6 +180,9 @@ void Timetable::parse_stop_times() {
             stops.push_back(stop_id);
 
             // Map the stop_id to its index in the stop sequence
+            if (stop_id >= routes[route_id].stop_positions.size()) {
+                routes[route_id].stop_positions.resize(stop_id + 1);
+            }
             routes[route_id].stop_positions[stop_id].push_back(stops.size() - 1);
         }
     }

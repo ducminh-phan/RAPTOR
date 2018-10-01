@@ -12,7 +12,6 @@
 
 
 using route_stop_queue_t = std::unordered_map<route_id_t, node_id_t>;
-using labels_t = std::unordered_map<node_id_t, std::vector<Time>>;
 
 
 class Raptor {
