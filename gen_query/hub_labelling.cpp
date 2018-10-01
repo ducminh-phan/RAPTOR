@@ -9,7 +9,7 @@ extern const Distance infty = std::numeric_limits<Distance>::max();
 
 void GraphLabel::parse_hub_files() {
     igzstream in_hubs_file_stream {(_path + "in_hubs.gr.gz").c_str()};
-    io::CSVReader<3> in_hubs_reader {"in_hubs.gr", in_hubs_file_stream};
+    io::CSVReader<3, io::trim_chars<>, io::no_quote_escape<' '>> in_hubs_reader {"in_hubs.gr", in_hubs_file_stream};
     in_hubs_reader.set_header("node_id", "stop_id", "distance");
 
     Node node_id;
@@ -22,7 +22,7 @@ void GraphLabel::parse_hub_files() {
     }
 
     igzstream out_hubs_file_stream {(_path + "out_hubs.gr.gz").c_str()};
-    io::CSVReader<3> out_hubs_reader {"out_hubs.gr", out_hubs_file_stream};
+    io::CSVReader<3, io::trim_chars<>, io::no_quote_escape<' '>> out_hubs_reader {"out_hubs.gr", out_hubs_file_stream};
     out_hubs_reader.set_header("stop_id", "node_id", "distance");
 
     while (out_hubs_reader.read_row(stop_id, node_id, distance)) {

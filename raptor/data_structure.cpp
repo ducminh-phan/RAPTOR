@@ -105,8 +105,10 @@ void Timetable::parse_transfers() {
 
 
 void Timetable::parse_hubs() {
+    inverse_in_hubs.resize(max_node_id);
+
     igzstream in_hubs_file_stream {(path + "in_hubs.gr.gz").c_str()};
-    io::CSVReader<3> in_hubs_reader {"in_hubs.gr", in_hubs_file_stream};
+    io::CSVReader<3, io::trim_chars<>, io::no_quote_escape<' '>> in_hubs_reader {"in_hubs.gr", in_hubs_file_stream};
     in_hubs_reader.set_header("node_id", "stop_id", "distance");
 
     node_id_t node_id;
@@ -125,8 +127,10 @@ void Timetable::parse_hubs() {
         inverse_in_hubs[node_id].emplace_back(time, stop_id);
     }
 
+    inverse_out_hubs.resize(max_node_id);
+
     igzstream out_hubs_file_stream {(path + "out_hubs.gr.gz").c_str()};
-    io::CSVReader<3> out_hubs_reader {"out_hubs.gr", out_hubs_file_stream};
+    io::CSVReader<3, io::trim_chars<>, io::no_quote_escape<' '>> out_hubs_reader {"out_hubs.gr", out_hubs_file_stream};
     out_hubs_reader.set_header("stop_id", "node_id", "distance");
 
     while (out_hubs_reader.read_row(stop_id, node_id, distance)) {
