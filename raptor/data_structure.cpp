@@ -177,13 +177,18 @@ void Timetable::parse_stop_times() {
         // trip_id is the first trip of its route
         if (trip_id == routes[route_id].trips[0]) {
             auto& stops = routes[route_id].stops;
+            auto& route_stop_positions = routes[route_id].stop_positions;
             stops.push_back(stop_id);
 
             // Map the stop_id to its index in the stop sequence
-            if (stop_id >= routes[route_id].stop_positions.size()) {
-                routes[route_id].stop_positions.resize(stop_id + 1);
+            if (stop_id >= route_stop_positions.size()) {
+                route_stop_positions.resize(stop_id + 1);
             }
-            routes[route_id].stop_positions[stop_id].push_back(stops.size() - 1);
+
+            // Only store the position of the first appearance of the stop
+            if (std::count(stops.begin(), stops.end(), stop_id) == 1) {
+                route_stop_positions[stop_id] = stops.size() - 1;
+            }
         }
     }
 }

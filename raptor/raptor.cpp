@@ -14,8 +14,8 @@ bool Raptor::check_stops_order(const route_id_t& route_id, const node_id_t& stop
 
     const auto& route = m_timetable->routes[route_id];
 
-    const auto& idx1 = route.stop_positions.at(stop1).front();
-    const auto& idx2 = route.stop_positions.at(stop2).front();
+    const auto& idx1 = route.stop_positions.at(stop1);
+    const auto& idx2 = route.stop_positions.at(stop2);
 
     return idx1 < idx2;
 }
@@ -86,7 +86,7 @@ trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_i
 
     const auto& route = m_timetable->routes[route_id];
 
-    const auto& stop_times = route.stop_times;
+    const auto& stop_times = route.stop_times_by_trips;
     trip_id_t earliest_trip = NULL_TRIP;
 
     auto first = stop_times.begin();
@@ -166,7 +166,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
             auto& route = m_timetable->routes[route_id];
 
             trip_id_t t = NULL_TRIP;
-            size_t stop_idx = route.stop_positions[stop_id].front();
+            size_t stop_idx = route.stop_positions[stop_id];
 
             // Iterate over the stops of the route beginning with stop_id
             for (size_t i = stop_idx; i < route.stops.size(); ++i) {

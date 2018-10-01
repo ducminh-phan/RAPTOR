@@ -120,7 +120,7 @@ struct Route {
     std::vector<trip_id_t> trips;
     std::vector<node_id_t> stops;
     std::vector<std::vector<StopTime>> stop_times;
-    std::vector<std::vector<size_t>> stop_positions;
+    std::vector<size_t> stop_positions;
 };
 
 
