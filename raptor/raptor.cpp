@@ -1,7 +1,4 @@
 #include <algorithm> // std::find, std::min
-#include <functional>
-#include <iostream>
-#include <queue>
 
 #include "raptor.hpp"
 
@@ -59,58 +56,18 @@ route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops) {
 // i.e., the earliest trip t such that t_dep(t, s) >= t_(k-1) (s),
 // or the latest trip t such that t_arr(t, s) <= t_(k-1) (s) if the query is backward
 trip_id_t Raptor::earliest_trip(const route_id_t& route_id, const size_t& stop_idx, const Time& t) {
-    static std::unordered_map<cache_key_t, trip_id_t, std::hash<cache_key_t>> cache;
-
     #ifdef PROFILE
-    auto* prof_c = new Profiler {"cached"};
-    #endif
-
-    // We make the label of the stop as a part of the key, instead of the round.
-    // This speeds up the function since the label could be the same in several rounds,
-    // so that we do not need to find the earliest trip again in another round if the
-    // label remains the same.
-    cache_key_t key = std::make_tuple(route_id, stop_idx, t.val());
-    const auto& search = cache.find(key);
-    if (search != cache.end()) {
-        #ifdef PROFILE
-        delete prof_c;
-        #endif
-
-        return search->second;
-    }
-
-    #ifdef PROFILE
-    delete prof_c;
     Profiler prof {__func__};
     #endif
 
-    const auto& route = m_timetable->routes[route_id];
+    const auto& stop_events = m_timetable->routes[route_id].stop_times_by_stops[stop_idx];
+    const auto& iter = std::lower_bound(stop_events.begin(), stop_events.end(), t,
+                                        [&](const StopTime& st, const Time& t) { return st.dep < t; });
 
-    const auto& stop_times = route.stop_times_by_trips;
-    trip_id_t earliest_trip = NULL_TRIP;
+    const auto& distance = static_cast<size_t>(iter - stop_events.begin());
+    const auto& trip_id = m_timetable->routes[route_id].trips[distance];
+    trip_id_t earliest_trip = iter == stop_events.end() ? NULL_TRIP : trip_id;
 
-    auto first = stop_times.begin();
-    size_t count = stop_times.size();
-    size_t step;
-    while (count > 0) {
-        auto it = first;
-        step = count / 2;
-        std::advance(it, step);
-
-        const Time& dep = stop_times.at(static_cast<size_t>(it - stop_times.begin())).at(stop_idx).dep;
-        if (dep < t) {
-            first = ++it;
-            count -= step + 1;
-        } else {
-            count = step;
-        }
-    }
-
-    if (first != stop_times.end()) {
-        earliest_trip = route.trips.at(static_cast<size_t>(first - stop_times.begin()));
-    }
-
-    cache[key] = earliest_trip;
     return earliest_trip;
 }
 

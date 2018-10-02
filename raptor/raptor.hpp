@@ -41,7 +41,4 @@ public:
 };
 
 
-using cache_key_t = std::tuple<route_id_t, size_t, Time::value_type>;
-
-
 #endif // RAPTOR_HPP
