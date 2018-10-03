@@ -18,35 +18,37 @@ bool Raptor::check_stops_order(const route_id_t& route_id, const node_id_t& stop
 }
 
 
-route_stop_queue_t Raptor::make_queue(std::set<node_id_t>& marked_stops) {
+route_stop_queue_t Raptor::make_queue() {
     #ifdef PROFILE
     Profiler prof {__func__};
     #endif
 
     route_stop_queue_t queue;
 
-    for (const auto& stop_id: marked_stops) {
-        const Stop& stop = m_timetable->stops[stop_id];
+    for (const auto& stop: m_timetable->stops) {
+        const auto& stop_id = stop.id;
 
-        for (const auto& route_id: stop.routes) {
-            const auto& route_iter = queue.find(route_id);
+        if (stop_is_marked[stop_id]) {
+            for (const auto& route_id: stop.routes) {
+                const auto& route_iter = queue.find(route_id);
 
-            // Check if there is already a pair (r, p) in the queue
-            if (route_iter != queue.end()) {
-                const auto& p = route_iter->second;
+                // Check if there is already a pair (r, p) in the queue
+                if (route_iter != queue.end()) {
+                    const auto& p = route_iter->second;
 
-                // If s comes before p, replace p by s
-                if (check_stops_order(route_id, stop_id, p)) {
+                    // If s comes before p, replace p by s
+                    if (check_stops_order(route_id, stop_id, p)) {
+                        queue[route_id] = stop_id;
+                    }
+                } else {
+                    // If r is not in the queue, add (r, s) to the queue
                     queue[route_id] = stop_id;
                 }
-            } else {
-                // If r is not in the queue, add (r, s) to the queue
-                queue[route_id] = stop_id;
             }
         }
     }
 
-    marked_stops.clear();
+    stop_is_marked.assign(stop_is_marked.size(), false);
 
     return queue;
 }
@@ -79,7 +81,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
     earliest_arrival_time[source_id] = {departure_time};
     prev_earliest_arrival_time[source_id] = {departure_time};
 
-    marked_stops.insert(source_id);
+    stop_is_marked[source_id] = true;
 
     // If walking is unlimited, we can have a pure walking journey from the source to the target.
     // But in the case of profile queries, we need journeys to contain at least one trip, i.e.,
@@ -101,8 +103,10 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
         #endif
 
         // First stage, copy the earliest arrival times to the previous round
-        for (const auto& s: marked_stops) {
-            prev_earliest_arrival_time[s] = earliest_arrival_time[s];
+        for (const auto& stop: m_timetable->stops) {
+            if (stop_is_marked[stop.id]) {
+                prev_earliest_arrival_time[stop.id] = earliest_arrival_time[stop.id];
+            }
         }
 
         #ifdef PROFILE
@@ -110,7 +114,8 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
         #endif
 
         // Second stage
-        auto queue = make_queue(marked_stops);
+        auto queue = make_queue();
+        stops_improved = false;
 
         #ifdef PROFILE
         auto* prof_2 = new Profiler {"traverse routes"};
@@ -142,7 +147,8 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
                     // Local and target pruning
                     if (arr < std::min(earliest_arrival_time[p_i], earliest_arrival_time[target_id])) {
                         earliest_arrival_time[p_i] = arr;
-                        marked_stops.insert(p_i);
+                        stop_is_marked[p_i] = true;
+                        stops_improved = true;
                     }
                 }
 
@@ -158,14 +164,14 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
         #endif
 
         target_labels.push_back(earliest_arrival_time[target_id]);
-        if (marked_stops.empty()) break;
+        if (!stops_improved) break;
 
         // Third stage, look at footpaths
 
         // In the first round, we need to consider also the transfers starting from the source,
         // this was not considered in the original version of RAPTOR
         if (round == 1 && !profile) {
-            marked_stops.insert(source_id);
+            stop_is_marked[source_id] = true;
         }
 
         scan_footpaths(target_id);
@@ -176,7 +182,7 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
         // starting from source_id again is just a duplication of what was already done
         // in the first round.
         if (round == 1 && !profile) {
-            marked_stops.erase(source_id);
+            stop_is_marked[source_id] = false;
         }
 
         // The earliest arrival time at target_id could have been changed
@@ -191,55 +197,60 @@ std::vector<Time> Raptor::query(const node_id_t& source_id, const node_id_t& tar
 
 void Raptor::scan_footpaths(const node_id_t& target_id) {
     Time tmp_time;
+    static std::unordered_set<node_id_t> improved_stops_or_hubs;
 
     if (!use_hl) {
-        std::unordered_set<node_id_t> stops_to_mark;
+        for (const auto& stop: m_timetable->stops) {
+            const auto& stop_id = stop.id;
 
-        for (const auto& stop_id: marked_stops) {
-            for (const auto& transfer: m_timetable->stops[stop_id].transfers) {
-                const auto& dest_id = transfer.dest;
-                const auto& transfer_time = transfer.time;
+            if (stop_is_marked[stop_id]) {
+                for (const auto& transfer: m_timetable->stops[stop_id].transfers) {
+                    const auto& dest_id = transfer.dest;
+                    const auto& transfer_time = transfer.time;
 
-                tmp_time = earliest_arrival_time[stop_id] + transfer_time;
+                    tmp_time = earliest_arrival_time[stop_id] + transfer_time;
 
-                if (tmp_time < earliest_arrival_time[dest_id]) {
-                    earliest_arrival_time[dest_id] = tmp_time;
-                    stops_to_mark.insert(dest_id);
+                    if (tmp_time < earliest_arrival_time[dest_id]) {
+                        earliest_arrival_time[dest_id] = tmp_time;
+                        improved_stops_or_hubs.insert(dest_id);
+                    }
+
+                    // Since the transfers are sorted in the increasing order of walking time,
+                    // we can skip the scanning of the transfers as soon as the arrival time
+                    // of the destination is later than that of the target
+                    if (tmp_time > earliest_arrival_time[target_id]) break;
                 }
-
-                // Since the transfers are sorted in the increasing order of walking time,
-                // we can skip the scanning of the transfers as soon as the arrival time
-                // of the destination is later than that of the target
-                if (tmp_time > earliest_arrival_time[target_id]) break;
             }
         }
 
-        for (const auto& stop_id: stops_to_mark) {
-            marked_stops.insert(stop_id);
+        for (const auto& stop_id: improved_stops_or_hubs) {
+            stop_is_marked[stop_id] = true;
         }
     } else {
-        std::unordered_set<node_id_t> improved_hubs;
+        for (const auto& stop: m_timetable->stops) {
+            const auto& stop_id = stop.id;
 
-        for (const auto& stop_id: marked_stops) {
-            for (const auto& kv: m_timetable->stops[stop_id].out_hubs) {
-                const auto& walking_time = kv.first;
-                const auto& hub_id = kv.second;
+            if (stop_is_marked[stop_id]) {
+                for (const auto& kv: m_timetable->stops[stop_id].out_hubs) {
+                    const auto& walking_time = kv.first;
+                    const auto& hub_id = kv.second;
 
-                tmp_time = earliest_arrival_time[stop_id] + walking_time;
+                    tmp_time = earliest_arrival_time[stop_id] + walking_time;
 
-                // Since we sort the links stop->out-hub in the increasing order of walking time,
-                // as soon as the arrival time propagated to a hub is after the earliest arrival time
-                // at the target, there is no need to propagate to the next hubs
-                if (tmp_time > earliest_arrival_time[target_id]) break;
+                    // Since we sort the links stop->out-hub in the increasing order of walking time,
+                    // as soon as the arrival time propagated to a hub is after the earliest arrival time
+                    // at the target, there is no need to propagate to the next hubs
+                    if (tmp_time > earliest_arrival_time[target_id]) break;
 
-                if (tmp_time < tmp_hub_labels[hub_id]) {
-                    tmp_hub_labels[hub_id] = tmp_time;
-                    improved_hubs.insert(hub_id);
+                    if (tmp_time < tmp_hub_labels[hub_id]) {
+                        tmp_hub_labels[hub_id] = tmp_time;
+                        improved_stops_or_hubs.insert(hub_id);
+                    }
                 }
             }
         }
 
-        for (const auto& hub_id: improved_hubs) {
+        for (const auto& hub_id: improved_stops_or_hubs) {
             // We need to check if hub_id, which is the out-hub of some stop,
             // is the in-hub of some other stop
             if (m_timetable->inverse_in_hubs[hub_id].empty()) {
@@ -252,27 +263,30 @@ void Raptor::scan_footpaths(const node_id_t& target_id) {
 
                     if (tmp_time < earliest_arrival_time[stop_id]) {
                         earliest_arrival_time[stop_id] = tmp_time;
-                        marked_stops.insert(stop_id);
+                        stop_is_marked[stop_id] = true;
                     }
                 }
             }
         }
     }
+
+    improved_stops_or_hubs.clear();
 }
 
 
 void Raptor::init() {
-    earliest_arrival_time.resize(m_timetable->max_stop_id);
-    prev_earliest_arrival_time.resize(m_timetable->max_stop_id);
+    stop_is_marked.assign(m_timetable->max_stop_id + 1, false);
+    earliest_arrival_time.resize(m_timetable->max_stop_id + 1);
+    prev_earliest_arrival_time.resize(m_timetable->max_stop_id + 1);
 
     if (use_hl) {
-        tmp_hub_labels.resize(m_timetable->max_node_id);
+        tmp_hub_labels.resize(m_timetable->max_node_id + 1);
     }
 }
 
 
 void Raptor::clear() {
-    marked_stops.clear();
+    stop_is_marked.clear();
     earliest_arrival_time.clear();
     prev_earliest_arrival_time.clear();
 
