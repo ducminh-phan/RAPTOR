@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     auto cli_parser = clara::Arg(name, "name")("The name of the dataset to be used in the algorithm") |
                       clara::Opt(use_hl)["--hl"]("Unrestricted walking with hub labelling") |
                       clara::Opt(profile)["-p"]["--profile"]("Run profile query") |
-                      clara::Opt(ranked)["-r"]["--ranked"]("Used ranked queries") |
+                      clara::Opt(ranked)["-r"]["--ranked"]("Use ranked queries") |
                       clara::Help(show_help);
 
     auto result = cli_parser.parse(clara::Args(argc, argv));
