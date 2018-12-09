@@ -151,7 +151,7 @@ public:
     Time walking_time(const node_id_t& source_id, const node_id_t& target_id) const;
 
     Timetable() {
-        path = "../Public-Transit-Data/" + name + "/";
+        path = "../../Public-Transit-Data/" + name + "/";
         parse_data();
     }
 
